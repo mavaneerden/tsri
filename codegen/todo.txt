@@ -1,0 +1,23 @@
+TODOs:
+- Make the hw_register and hw_register_field actual standalone classes again in their own files CHECK
+    - Allow inheritance again
+    - Make sure they are in a 'detail' or 'internal' namespace and in a separate include folder
+    - Make sure the appropriate functions are made private
+- Make hw_register and hw_register_field class specializations for readable/writable, so that some set/get functions
+  cannot be used (instead of giving a compile-time error).
+- Make registers and fields publically inherit from the base classes CHECK
+- Allow any value for get/set/clear bits functions for fields, not just the bit enum value CHECK
+- Create a get/set/clear bits fast function for fields that does not use the bitmask to remove out-of-range bits (i.e. assumes the input is a valid bit position)
+- Same for the normal get/set/clear functions for fields
+- Properly handle oneToClear fields, where you need to write a 1 to clear it CHECK
+- If a register has no fields, or one field which is 32 bits wide, make sure it doesn't actually have a field
+
+
+TODO2:
+- Documentation of functionality & requirements to get more of an overview
+- Try to make a construction where the register knows exactly the fields that it has this requires fields to be defined
+  BEFORE the register, but this should be doable using code generation (you'd just have duplicate, unused fields).
+- Implement missing functionality
+- Document all functions & classes & types
+- Test with compiler
+- Test on Pico

@@ -1,0 +1,98 @@
+{% macro get_access_modifier(register) -%}
+    {% set ns = namespace(access_type="") %}
+    {% for field in register.fields %}
+        {% if field.access.value == "read-write" or field.access.value == "read-write-once" %}
+            {% set ns.access_type = "read_write" %}
+            {% break %}
+        {% elif field.access.value == "read-only" and (ns.access_type == "write_only") %}
+            {% set ns.access_type = "read_write" %}
+            {% break %}
+        {% elif (field.access.value == "write-only" or field.access.value == "write-once") and (ns.access_type == "read_only") %}
+            {% set ns.access_type = "read_write" %}
+            {% break %}
+        {% elif field.access.value == "read-only" %}
+            {% set ns.access_type = "read_only" %}
+        {% elif field.access.value == "write-only" %}
+            {% set ns.access_type = "write_only" %}
+        {% endif %}
+    {% endfor %}
+{{ ns.access_type }}
+{%- endmacro %}
+
+{% set access_modifier = get_access_modifier(register) %}
+
+/* {{ peripheral.name }}::{{ register.name }}
+{% if register.description %}
+{{ register.description }}
+{% endif %}
+*/
+struct {{ register.name }} final
+{
+private:
+    using register_t = hw_register<{{ peripheral.base_address }}, {{ register.address_offset }}, access_modifiers::{{ access_modifier }}, {{ register.reset_value }}>;
+
+public:
+    {{ register.name }}()                               = delete;
+    {{ register.name }}({{ register.name }}&&)                         = delete;
+    {{ register.name }}(const {{ register.name }}&)                    = delete;
+    auto operator=({{ register.name }}&&) -> {{ register.name }}&      = delete;
+    auto operator=(const {{ register.name }}&) -> {{ register.name }}& = delete;
+    ~{{ register.name }}()                              = delete;
+
+{% if access_modifier == "read_only" or access_modifier == "read_write" %}
+    [[nodiscard]] static auto get() -> hw_register_value_t
+    {
+        return register_t::get();
+    }
+
+    template<typename... Fields>
+    [[nodiscard]] static auto get_fields() -> picobaremetal::utility::type_map<Fields...>
+    {
+        return register_t::template get_fields<Fields...>();
+    }
+{% endif %}
+
+{% if access_modifier == "write_only" or access_modifier == "read_write" %}
+    // clang-format off
+    [[deprecated("This function is unsafe to use! Use set_fields_overwrite() instead, unless you know what you are doing.")]]
+    static auto set(const hw_register_value_t value)
+    {
+        register_t::set(value);
+    }  // clang-format on
+
+    static auto clear()
+    {
+        register_t::clear();
+    }
+
+    template<typename... Fields>
+    static auto clear_fields()
+    {
+        return register_t::template clear_fields<Fields...>();
+    }
+
+    template<typename... Fields>
+    static auto set_fields(const typename Fields::value... values)
+    {
+        register_t::template set_fields<Fields...>(values...);
+    }
+
+    template<typename... Fields>
+    static auto set_fields_overwrite(const typename Fields::value... values)
+    {
+        register_t::template set_fields_overwrite<Fields...>(values...);
+    }
+
+    template<typename... FieldsAndValues>
+    static auto set_fields_asm()
+    {
+        register_t::template set_fields_asm<FieldsAndValues...>();
+    }
+{% endif %}
+
+    {% for field in register.fields %}
+    {% with field=field %}
+        {% include "field.jinja2" %}
+    {% endwith %}
+    {% endfor %}
+};

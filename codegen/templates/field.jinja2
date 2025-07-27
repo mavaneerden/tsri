@@ -1,0 +1,117 @@
+{%- macro field_type_name(field) -%}
+    {%- if field.enumerated_values -%}
+        {{ field.name|lower }}value_t
+    {%- elif field.bit_width == 1 -%}
+bool
+    {%- elif field.bit_width > 1 and field.bit_width <= 8 -%}
+uint8_t
+    {%- elif field.bit_width > 8 and field.bit_width <= 16 -%}
+uint16_t
+    {%- else -%}
+uint32_t
+    {%- endif -%}
+{%- endmacro -%}
+
+{%- macro get_access_modifier_field(field) -%}
+    {%- if field.access.value == "read-write" or field.access.value == "read-write-once" -%}
+{{ "read_write" }}
+    {%- elif field.access.value == "read-only" -%}
+{{ "read_only" }}
+    {%- elif field.access.value == "write-only" or field.access.value == "write-once" -%}
+{{ "write_only" }}
+    {%- endif -%}
+{%- endmacro -%}
+
+{%- macro get_field_name(field) -%}
+    {%- if field.name == register.name -%}
+{{ field.name }}_
+    {%- else -%}
+{{ field.name }}
+    {%- endif -%}
+{%- endmacro -%}
+
+{% set access_modifier_field = get_access_modifier_field(field) %}
+{% set field_name = get_field_name(field) %}
+
+/* {{ peripheral.name }}::{{ register.name }}::{{ field.name }}
+{% if field.description %}
+{{ field.description }}
+{% endif %}
+*/
+struct {{ field_name }} final
+{
+    friend register_t;
+
+private:
+{% if field.enumerated_values %}
+{% include "enumerated_values.jinja2" %}
+{% endif %}
+
+    enum class {{ field_name }}bits_t
+    {
+{% for bit in range(field.bit_width) %}
+        bit{{ bit }} = {{ bit }},
+{% endfor %}
+    };
+
+    using field_t =
+        hw_register_field<register_t, {{ field_type_name(field) }}, {{ field.bit_offset }}, {{ field.bit_width }}, access_modifiers::{{ access_modifier_field }}, {{ field_name }}bits_t>;
+
+public:
+    {{ field_name }}()                                  = delete;
+    {{ field_name }}({{ field_name }}&&)                         = delete;
+    {{ field_name }}(const {{ field_name }}&)                    = delete;
+    auto operator=({{ field_name }}&&) -> {{ field_name }}&      = delete;
+    auto operator=(const {{ field_name }}&) -> {{ field_name }}& = delete;
+    ~{{ field_name }}()                                 = delete;
+
+    using value = field_t::value;
+    using bit = {{ field_name }}bits_t;
+
+{% if access_modifier_field == "read_only" or access_modifier_field == "read_write" %}
+    [[nodiscard]] static auto get() -> value
+    {
+        return field_t::get();
+    }
+
+    template<typename... BitPositions>
+    [[nodiscard]] static auto get_bits(const BitPositions... bit_positions) -> value
+    {
+        return field_t::get_bits(bit_positions...);
+    }
+{% endif %}
+
+{% if access_modifier_field == "write_only" or access_modifier_field  == "read_write" %}
+    static auto set(const value value)
+    {
+{% if access_modifier_field == "write_only" %}
+        field_t::set_overwrite(value);
+{% else %}
+        field_t::set(value);
+{% endif %}
+    }
+
+    template<typename... BitPositions>
+    static auto set_bits(const BitPositions... bit_positions)
+    {
+{% if access_modifier_field == "write_only" %}
+        field_t::set_bits_overwrite(bit_positions...);
+{% else %}
+        field_t::set_bits(bit_positions...);
+{% endif %}
+    }
+{% endif %}
+
+{% if access_modifier_field == "read_write" %}
+    static auto clear()
+    {
+        field_t::clear();
+    }
+
+    template<typename... BitPositions>
+    static auto clear_bits(const BitPositions... bit_positions)
+    {
+        field_t::clear_bits(bit_positions...);
+    }
+{% endif %}
+};

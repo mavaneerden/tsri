@@ -1,0 +1,50 @@
+#include <bit>
+#include <concepts>
+#include <type_traits>
+
+#include "utility/concepts.hpp"
+#include "utility/size_of.hpp"
+#include "utility/type_map.hpp"
+#include "utility/types.hpp"
+
+namespace picobaremetal::rp2040::registers
+{
+
+/* {{ peripheral.name }}
+{% if peripheral.description %}
+{{ peripheral.description }}
+{% endif %}
+*/
+struct {{ peripheral.name }} final
+{
+private:
+    /* These includes need to be in this specific order! */
+    {% include "components/types.hpp" %}
+    {% include "components/access_modifiers.hpp" %}
+    {% include "components/field.hpp" %}
+    {% include "components/register.hpp" %}
+    {# #include "codegen/components/types.hpp"
+    #include "codegen/components/access_modifiers.hpp"
+    #include "codegen/components/field.hpp"
+    #include "codegen/components/register.hpp" #}
+
+public:
+    {{ peripheral.name }}()                              = delete;
+    {{ peripheral.name }}({{ peripheral.name }}&&)                         = delete;
+    {{ peripheral.name }}(const {{ peripheral.name }}&)                    = delete;
+    auto operator=({{ peripheral.name }}&&) -> {{ peripheral.name }}&      = delete;
+    auto operator=(const {{ peripheral.name }}&) -> {{ peripheral.name }}& = delete;
+    ~{{ peripheral.name }}()                             = delete;
+
+
+    // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+    {% for register in peripheral.registers %}
+    {% with register=register, peripheral=peripheral %}
+        {% include "register.jinja2" %}
+    {% endwith %}
+    {% endfor %}
+    // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+};
+
+}; // namespace picobaremetal::rp2040::registers
+

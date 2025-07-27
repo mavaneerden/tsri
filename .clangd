@@ -1,0 +1,70 @@
+CompileFlags:
+  Compiler: toolchain/bin/arm-none-eabi-g++
+  BuiltinHeaders: QueryDriver
+Diagnostics:
+  Suppress: [non_asm_stmt_in_naked_function, -Wunknown-attributes]
+  ClangTidy:
+    Add: [
+      clang-diagnostic-*,
+      clang-analyzer-*,
+      cppcoreguidelines-*,
+      bugprone-*,
+      modernize-*,
+      readability-*,
+      google-*,
+      misc-*,
+      performance-*
+    ]
+    Remove: [
+      performance-enum-size,       # Size gain is very minimal
+      google-readability-todo,     # I don't want to have to write authors at every TODO >:(
+      misc-misplaced-const,        # Sometimes thinks `int const *` is the same as `int * const`
+      misc-use-anonymous-namespace # I prefer static over anonymous namespaces
+    ]
+    FastCheckFilter: None
+Hover:
+  ShowAKA: true
+InlayHints:
+  BlockEnd: false
+  Designators: true
+  Enabled: true
+  ParameterNames: false
+  DeducedTypes: true
+  DefaultArguments: true
+  TypeNameLimit: 24
+
+---
+CompileFlags:
+  Add: [
+    -isystem/usr/include/c++/11,
+    -isystem/usr/include/x86_64-linux-gnu/c++/11,
+    -isystem/usr/include/c++/11/backward,
+    -isystem/usr/lib/gcc/x86_64-linux-gnu/11/include,
+    -isystem/usr/local/include,
+    -isystem/usr/include,
+    -std=c++2c,
+    -Weverything,
+    -Wno-c++98-compat,
+    -Wno-c++98-compat-pedantic,
+    -Wno-c++20-compat,
+    -Wno-documentation,
+    -Wno-missing-prototypes
+  ]
+---
+If:
+  PathMatch: .*/codegen/.*
+Index:
+  Background: Skip
+---
+If:
+  PathMatch: .*/install/.*
+Index:
+  Background: Skip
+---
+If:
+  PathMatch: examples/.*
+CompileFlags:
+  CompilationDatabase: build/debug/
+  Add: [
+    -I/workspaces/repository/install/include
+  ]

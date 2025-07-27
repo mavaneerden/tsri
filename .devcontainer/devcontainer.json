@@ -1,0 +1,34 @@
+{
+    "name": "Type-Safe Register Interface",
+    "build": {
+        "context": "..",
+        "dockerfile": "../Dockerfile"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cmake-tools",
+                "ms-vscode.cpptools",
+                "lyn-inc.HTML-Speed-Viewer",
+                "ms-python.python",
+                "llvm-vs-code-extensions.vscode-clangd",
+                "Gruntfuggly.todo-tree",
+                "wayou.vscode-todo-highlight",
+                "cschlosser.doxdocgen",
+                "ms-vscode.vscode-serial-monitor",
+                "ms-vscode.vscode-embedded-tools",
+                "mcu-debug.rtos-views",
+                "marus25.cortex-debug"
+            ],
+            "settings": {
+                "C_Cpp.intelliSenseEngine": "disabled",
+                "clangd.path": "clangd-20",
+                "clangd.arguments": [
+                    "--log=error",
+                    "--background-index",
+                    "--query-driver=toolchain/bin/arm-none-eabi-g++"
+                ]
+            }
+        }
+    }
+}
