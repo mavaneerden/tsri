@@ -20,8 +20,7 @@ namespace tsri::registers
  * @tparam PeripheralBaseAddress        Base address of the peripheral.
  * @tparam PeripheralBaseAddressOffset  Offest from theh peripheral base address.
  * @tparam ValueOnReset                 Value of the register after the CPU resets.
- * @tparam SupportsAtomicBitOperations  Whether the register supports atomic bit operations (xor, set, clear).
- * @tparam Fields                       Fields inside the register.
+ * @tparam RegisterFields               Fields inside the register.
  */
 template<
     utility::types::register_address_t PeripheralBaseAddress,

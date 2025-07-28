@@ -39,23 +39,69 @@ public:
     auto operator=(const type_map&) -> type_map& = default;
     ~type_map()                                  = default;
 
-    // TODO: perfect forwarding???
     template<typename Key>
-    constexpr auto get() const -> const Key::value_t&
+    [[nodiscard]] constexpr auto get() & -> auto&&
     {
         return std::get<type_pack_index<Key, Keys...>::value>(value_list);
+    }
+
+    template<typename Key>
+    [[nodiscard]] constexpr auto get() && -> auto&&
+    {
+        return std::get<type_pack_index<Key, Keys...>::value>(value_list);
+    }
+
+    template<typename Key>
+    [[nodiscard]] constexpr auto get() const& -> auto&&
+    {
+        return std::get<type_pack_index<Key, Keys...>::value>(value_list);
+    }
+
+    template<typename Key>
+    [[nodiscard]] constexpr auto get() const&& -> auto&&
+    {
+        return std::get<type_pack_index<Key, Keys...>::value>(value_list);
+    }
+
+    template<std::size_t Index>
+    [[nodiscard]] constexpr auto get() & -> auto&&
+    {
+        return std::get<Index>(value_list);
+    }
+
+    template<std::size_t Index>
+    [[nodiscard]] constexpr auto get() && -> auto&&
+    {
+        return std::get<Index>(value_list);
+    }
+
+    template<std::size_t Index>
+    [[nodiscard]] constexpr auto get() const& -> auto&&
+    {
+        return std::get<Index>(value_list);
+    }
+
+    template<std::size_t Index>
+    [[nodiscard]] constexpr auto get() const&& -> auto&&
+    {
+        return std::get<Index>(value_list);
     }
 };
 
 }  // namespace tsri::utility::types
 
-// TODO: structured binding support???
-// namespace std
-// {
-//     template<typename... Keys>
-//     struct tuple_size<picobaremetal::utility::type_map<Keys...>> : integral_constant<size_t, sizeof...(Keys)> {};
+/* Structured binding support for the type_map class. */
+namespace std
+{
 
-//     template<std::size_t Index, typename... Keys>
-//     struct tuple_element<Index, picobaremetal::utility::type_map<Keys...>> : std::tuple_element<Index,
-//     std::tuple<Keys...>> {};
-// }
+template<typename... Keys>
+struct tuple_size<tsri::utility::types::type_map<Keys...>> : public integral_constant<std::size_t, sizeof...(Keys)>
+{};
+
+template<std::size_t N, typename... Keys>
+struct tuple_element<N, tsri::utility::types::type_map<Keys...>>
+{
+    using type = Keys...[N] ::value_t;
+};
+
+}  // namespace std

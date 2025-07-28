@@ -97,7 +97,7 @@ public:
      *
      * @tparam BitPositions
      */
-    template<bit_position<RegisterFields...> auto... BitPositions>
+    template<bit_position_strict<RegisterFields...> auto... BitPositions>
         requires(base_t::template is_bit_position_in_any_settable_field<
                      static_cast<utility::types::register_size_t>(BitPositions)> and
                  ...) and
@@ -112,7 +112,7 @@ public:
      *
      * @tparam BitPositions
      */
-    template<bit_position<RegisterFields...> auto... BitPositions>
+    template<bit_position_strict<RegisterFields...> auto... BitPositions>
         requires(base_t::template is_bit_position_in_any_bit_clearable_field<
                      static_cast<utility::types::register_size_t>(BitPositions)> and
                  ...) and
@@ -127,7 +127,7 @@ public:
      *
      * @tparam BitPositions
      */
-    template<bit_position<RegisterFields...> auto... BitPositions>
+    template<bit_position_strict<RegisterFields...> auto... BitPositions>
         requires(base_t::template is_bit_position_in_any_bit_togglable_field<
                      static_cast<utility::types::register_size_t>(BitPositions)> and
                  ...) and

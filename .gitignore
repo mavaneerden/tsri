@@ -36,3 +36,4 @@
 build/
 install/
 .cache/
+.vscode/settings.json

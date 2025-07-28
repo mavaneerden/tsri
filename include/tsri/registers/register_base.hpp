@@ -6,19 +6,13 @@
  * @date 2025-07-25
  *
  * This file contains a templated base class for hardware registers.
- * This file serves as a base for the read-only, write-only and read-write registers.
- *
- * Each register has the following properties, which are known at compile time:
- *  - Peripheral base memory address;
- *  - Offset from the peripheral base memory address;
- *  - Value on reset;
- *  - Whether the register supports the RP2040 atomic bit set, clear and XOR functionality;
- *  - One or more fields.
+ * The class serves as a base for the read-only, write-only and read-write registers.
  */
 #pragma once
 
 #include <bit>
 #include <climits>
+#include <concepts>
 #include <type_traits>
 
 #include "../utility/concepts.hpp"
@@ -27,9 +21,16 @@
 namespace tsri::registers
 {
 
+/* Checks if the `BitPositionCandidate` corresponds to the bit type of any of the `Fields`. */
+template<typename BitPositionCandidate, typename... Fields>
+concept bit_position_strict = (std::is_same_v<BitPositionCandidate, typename Fields::bit_t> or ...);
+
+/* Checks if the `BitPositionCandidate` corresponds to the bit type of any of the `Fields`,
+ * or is an unsigned integer.
+ */
 template<typename BitPositionCandidate, typename... Fields>
 concept bit_position = (std::is_same_v<BitPositionCandidate, typename Fields::bit_t> or ...) or
-                       std::is_convertible_v<BitPositionCandidate, utility::types::register_value_t>;
+                       std::unsigned_integral<BitPositionCandidate>;
 
 /* Number of bits in a register. */
 inline constexpr utility::types::register_size_t num_bits_in_register =
@@ -41,9 +42,7 @@ inline constexpr utility::types::register_size_t num_bits_in_register =
  *
  * @tparam PeripheralBaseAddress        Base address of the peripheral.
  * @tparam PeripheralBaseAddressOffset  Offest from theh peripheral base address.
- * @tparam ValueOnReset                 Value of the register after the CPU resets.
- * @tparam SupportsAtomicBitOperations  Whether the register supports atomic bit operations (xor, set, clear).
- * @tparam Fields                       Fields inside the register.
+ * @tparam RegisterFields               Fields inside the register.
  */
 template<
     utility::types::register_address_t PeripheralBaseAddress,
@@ -83,87 +82,87 @@ private:
 
 protected:
     /**
-     * @brief
+     * @brief `true` if `Fields` is a subset of the register's fields, `false` otherwise.
      *
-     * @tparam Fields
+     * @tparam Fields Fields to check.
      */
     template<typename... Fields>
     static constexpr bool are_fields_in_register =
         (utility::concepts::is_type_in_list_v<Fields, RegisterFields...> and ...);
 
     /**
-     * @brief
+     * @brief `true` if ALL `Fields` are readable, `false` otherwise.
      *
-     * @tparam Fields
+     * @tparam Fields Fields to check.
      */
     template<typename... Fields>
     static constexpr bool are_fields_readable = (Fields::is_readable and ...);
 
     /**
-     * @brief
+     * @brief `true` if ALL `Fields` are settable, `false` otherwise.
      *
-     * @tparam Fields
+     * @tparam Fields Fields to check.
      */
     template<typename... Fields>
     static constexpr bool are_fields_settable = (Fields::is_settable and ...);
 
     /**
-     * @brief
+     * @brief `true` if ALL `Fields` are clearable, `false` otherwise.
      *
-     * @tparam Fields
+     * @tparam Fields Fields to check.
      */
     template<typename... Fields>
     static constexpr bool are_fields_clearable = (Fields::is_clearable and ...);
 
     /**
-     * @brief
+     * @brief `true` if the `BitPosition` is inside any readable field in the register, `false` otherwise.
      *
-     * @tparam BitPosition
+     * @tparam BitPosition Bit positoin to check.
      */
     template<utility::types::register_size_t BitPosition>
     static constexpr bool is_bit_position_in_any_readable_field =
         ((RegisterFields::template is_bit_position_in_field<BitPosition> and RegisterFields::is_readable) or ...);
 
     /**
-     * @brief
+     * @brief `true` if the `BitPosition` is inside any write-only field in the register, `false` otherwise.
      *
-     * @tparam BitPosition
+     * @tparam BitPosition Bit positoin to check.
      */
     template<utility::types::register_size_t BitPosition>
     static constexpr bool is_bit_position_in_any_write_only_field =
         ((RegisterFields::template is_bit_position_in_field<BitPosition> and RegisterFields::is_write_only) or ...);
 
     /**
-     * @brief
+     * @brief `true` if the `BitPosition` is inside any settable field in the register, `false` otherwise.
      *
-     * @tparam BitPosition
+     * @tparam BitPosition Bit positoin to check.
      */
     template<utility::types::register_size_t BitPosition>
     static constexpr bool is_bit_position_in_any_settable_field =
         ((RegisterFields::template is_bit_position_in_field<BitPosition> and RegisterFields::is_settable) or ...);
 
     /**
-     * @brief
+     * @brief `true` if the `BitPosition` is inside any bit-clearable field in the register, `false` otherwise.
      *
-     * @tparam BitPosition
+     * @tparam BitPosition Bit positoin to check.
      */
     template<utility::types::register_size_t BitPosition>
     static constexpr bool is_bit_position_in_any_bit_clearable_field =
         ((RegisterFields::template is_bit_position_in_field<BitPosition> and RegisterFields::is_bit_clearable) or ...);
 
     /**
-     * @brief
+     * @brief `true` if the `BitPosition` is inside any bit-togglable field in the register, `false` otherwise.
      *
-     * @tparam BitPosition
+     * @tparam BitPosition Bit positoin to check.
      */
     template<utility::types::register_size_t BitPosition>
     static constexpr bool is_bit_position_in_any_bit_togglable_field =
         ((RegisterFields::template is_bit_position_in_field<BitPosition> and RegisterFields::is_bit_togglable) or ...);
 
     /* NOLINTBEGIN(readability-redundant-inline-specifier)
-     * Inline is actually not redundant here. On GCC with -Og, these functions are not inlined without the inline or
-     * constexpr specifier. Constexpr would work, but in my opinion it is not the correct keyword to use because this
-     * function can never be evaluated at compile time: it is a cast to a volatile pointer. As such, I use inline here.
+     * Inline is actually not redundant here. On GCC with -Og, these functions are not inlined without the `inline` or
+     * `constexpr` specifier. Constexpr would work, but in my opinion it is not the correct keyword to use because these
+     * functions can never be evaluated at compile time: it is a cast to a volatile pointer.
      */
 
     /**

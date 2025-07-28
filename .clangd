@@ -43,11 +43,11 @@ CompileFlags:
     -isystem/usr/local/include,
     -isystem/usr/include,
     -std=c++2c,
+    -mthumb,
     -Weverything,
     -Wno-c++98-compat,
     -Wno-c++98-compat-pedantic,
     -Wno-c++20-compat,
-    -Wno-documentation,
     -Wno-missing-prototypes
   ]
 ---

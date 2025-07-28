@@ -1,11 +1,9 @@
 /**
- * @file field_base.hpp
+ * @file field.hpp
  * @author Marco van Eerden (mavaneerden@gmail.com)
- * @brief Base class for the representation of hardware register fields.
+ * @brief Contains a class for the representation of hardware register fields.
  * @version 0.1
  * @date 2025-07-25
- *
- * TODO:
  */
 #pragma once
 
@@ -21,8 +19,15 @@ namespace tsri::fields
 {
 
 /**
- * @brief Base class for hardware register field representation.
- * Derived classes should specialise on access modifier: read-only, write-only or read-write.
+ * @brief Class for hardware register field representation.
+ * All register classes need to make use of the fields, but we don't want to expose the user to all of its functions.
+ * As such, the `field` class must befriend all register classes.
+ *
+ * This class exposes a grand total of three (3) things:
+ *  1. `value_t`: the type of the field value. If it is an enum, this can be used to access its values.
+ *  2. `bit_t`: the type of the field bits, this should be an `enum class`.
+ *  3. `value_on_reset`: default value of the field after the processor resets. Can be used for e.g. setting the field
+ *     back to its reset value.
  *
  * @tparam StartBit     Start bit position in the register.
  * @tparam LengthInBits Length of the field in bits
@@ -33,13 +38,15 @@ namespace tsri::fields
 template<
     utility::types::register_size_t StartBit,
     utility::types::register_size_t LengthInBits,
-    types::field_type               FieldType,
+    field_types::field_type         TypeOfField,
     std::semiregular                ValueType,
     typename BitType,
     ValueType FieldValueOnReset>
     requires std::is_scoped_enum_v<BitType>
-class field_base
+class field
 {
+    /* Ayo this class has more friends than me... 🥲 */
+
     template<
         utility::types::register_address_t PeripheralBaseAddress,
         utility::types::register_address_t PeripheralBaseAddressOffset,
@@ -77,48 +84,49 @@ class field_base
     friend class registers::register_read_write;
 
 public:
-    field_base()                                     = delete;
-    field_base(field_base&&)                         = delete;
-    field_base(const field_base&)                    = delete;
-    auto operator=(field_base&&) -> field_base&      = delete;
-    auto operator=(const field_base&) -> field_base& = delete;
-    ~field_base()                                    = delete;
+    field()                                = delete;
+    field(field&&)                         = delete;
+    field(const field&)                    = delete;
+    auto operator=(field&&) -> field&      = delete;
+    auto operator=(const field&) -> field& = delete;
+    ~field()                               = delete;
 
-    /* */
+    /* Type of the field value. If this is a (scoped) enum, this can be used to get the enumeration values. */
     using value_t = ValueType;
 
-    /* */
+    /* Field bit type, can be used to get the individual field bit positions in the register. */
     using bit_t = BitType;
 
-    /* */
+    /* Value of the field after processor reset. */
     static constexpr value_t value_on_reset = FieldValueOnReset;
 
-protected:
+private:
     /* Whether the field is readable. */
-    static constexpr bool is_readable = types::is_readable<FieldType>;
+    static constexpr bool is_readable = field_types::is_readable<TypeOfField>;
 
     /* Whether field can be set. */
-    static constexpr bool is_settable = types::is_settable<FieldType>;
+    static constexpr bool is_settable = field_types::is_settable<TypeOfField>;
 
     /* Whether field can be cleared. */
-    static constexpr bool is_clearable = types::is_clearable<FieldType>;
+    static constexpr bool is_clearable = field_types::is_clearable<TypeOfField>;
 
     /* Whether field can be cleared on the bit level. */
-    static constexpr bool is_bit_clearable = types::is_bit_clearable<FieldType>;
+    static constexpr bool is_bit_clearable = field_types::is_bit_clearable<TypeOfField>;
 
     /* Whether field can be toggled on the bit level. */
-    static constexpr bool is_bit_togglable = types::is_bit_togglable<FieldType>;
+    static constexpr bool is_bit_togglable = field_types::is_bit_togglable<TypeOfField>;
 
     /* Whether field can be toggled on the bit level. */
-    static constexpr bool is_write_clear = std::is_same_v<FieldType, types::write_clear>;
+    static constexpr bool is_write_clear = std::is_same_v<TypeOfField, field_types::write_clear>;
 
     /**
-     * @brief
+     * @brief True if the given bit position lies inside the field, false otherwise.
      *
-     * @tparam BitPosition
+     * @tparam BitPosition Bit position to check.
      */
     template<utility::types::register_size_t BitPosition>
-    static constexpr bool is_bit_position_in_field = BitPosition >= StartBit and BitPosition < (LengthInBits + StartBit);
+    static constexpr bool is_bit_position_in_field =
+        BitPosition >= StartBit and BitPosition < (LengthInBits + StartBit);
 
     /* Bitmask of the field inside the register. */
     static constexpr auto bitmask = []() -> utility::types::register_value_t {
@@ -159,14 +167,26 @@ protected:
     }
 
     /**
-     * @brief
+     * @brief Extract the field's value from the value of the register. I.e. use bitmask and shift to the 0 position.
      *
-     * @param value
-     * @return ValueType
+     * @param value Register value.
+     * @return ValueType Field value, of type value_t.
      */
     static constexpr auto get_field_value_from_register_value(const utility::types::register_value_t value) -> ValueType
     {
         return static_cast<ValueType>((value & bitmask) >> StartBit);
+    }
+
+    /**
+     * @brief Extract the field's value from the value of the register, but do not use a bitmask.
+     * This function can be used if the field is the only field in the register.
+     *
+     * @param value Register value.
+     * @return ValueType Field value, of type value_t.
+     */
+    static constexpr auto get_field_value_from_register_value_no_bitmask(const utility::types::register_value_t value) -> ValueType
+    {
+        return static_cast<ValueType>((value) >> StartBit);
     }
 };
 

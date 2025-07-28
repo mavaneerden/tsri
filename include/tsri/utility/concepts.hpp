@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <type_traits>
 
 namespace tsri::utility::concepts
@@ -49,5 +50,8 @@ static constexpr bool are_values_unique = ((V != Vs) and ...) and are_values_uni
 
 template<auto V>
 static constexpr bool are_values_unique<V> = true;
+
+template<typename T>
+static constexpr bool is_unsigned_integral_v = std::unsigned_integral<T>;
 
 }  // namespace tsri::utility::concepts

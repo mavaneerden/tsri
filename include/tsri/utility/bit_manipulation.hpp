@@ -7,8 +7,8 @@
 namespace tsri::utility::bit_manipulation {
 
     /**
-     * @brief Get the bit position bitmask object
-     * TODO: move to utility
+     * @brief
+     *
      * @param bit_positions
      * @return utility::types::register_value_t
      */
