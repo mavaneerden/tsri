@@ -44,7 +44,7 @@ private:
      * @param bit_positions
      * @return
      */
-    static constexpr auto set_bits_impl(const bit_position<RegisterFields...> auto... bit_positions)
+    static constexpr auto set_bits_impl(const bit_position<RegisterFields...> auto... bit_positions) noexcept
     {
         static constexpr auto bitmask = utility::bit_manipulation::get_bit_positions_bitmask(
             static_cast<utility::types::register_size_t>(bit_positions)...);
@@ -70,7 +70,7 @@ public:
                      static_cast<utility::types::register_size_t>(BitPositions)> and
                  ...) and
                 utility::concepts::are_values_unique<static_cast<utility::types::register_size_t>(BitPositions)...>
-    static constexpr auto set_bits()
+    static constexpr auto set_bits() noexcept
     {
         set_bits_impl(BitPositions...);
     }
@@ -86,7 +86,7 @@ public:
          *
          * @param bit_positions
          */
-        static constexpr auto set_bits(const bit_position<RegisterFields...> auto... bit_positions)
+        static constexpr auto set_bits(const bit_position<RegisterFields...> auto... bit_positions) noexcept
         {
             set_bits_impl(bit_positions...);
         }

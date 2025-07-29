@@ -1,11 +1,11 @@
 /**
  * @file register_read_only.hpp
  * @author Marco van Eerden (mavaneerden@gmail.com)
- * @brief Base class for representation of hardware registers.
+ * @brief Base class for read-only registers.
  * @version 0.1
  * @date 2025-07-26
  *
- * TODO:
+ * The `register_read_only` class can be inherited from to create a read-only register.
  */
 #pragma once
 
@@ -44,12 +44,15 @@ private:
      * @return false             If the `evaluate` function returns `false`.
      */
     [[nodiscard]] static constexpr auto bit_check_impl(
-        const auto& evaluate, const bit_position<RegisterFields...> auto... bit_positions) -> bool
+        const auto&                                evaluate,
+        const bit_position<RegisterFields...> auto first_bit_position,
+        const bit_position<RegisterFields...> auto... bit_positions) noexcept -> bool
     {
         const auto bitmask = utility::bit_manipulation::get_bit_positions_bitmask(
+            static_cast<utility::types::register_size_t>(first_bit_position),
             static_cast<utility::types::register_size_t>(bit_positions)...);
 
-        /* clang-format off
+/* clang-format off
          * Optimization: if there is only one bit position, we can save some instructions by using only bitwise
          * operations. We can shift the bit position in the register to the 0 position, and then logical and with 1 to
          * check the bit at the 0 position. This saves a whopping 2 instructions on GCC. Could have been 3 if it didn't
@@ -77,8 +80,8 @@ private:
 #if defined(__GNUC__) && !defined(__clang__)
         if constexpr (sizeof...(bit_positions) == 1U)
         {
-            return (base_t::const_reference() >> static_cast<utility::types::register_size_t>(bit_positions...[0])) &
-                   1U;
+            // TODO: use C++26 pack indexing when compilers have matured
+            return (base_t::const_reference() >> static_cast<utility::types::register_size_t>(first_bit_position)) & 1U;
         }
 #endif
 
@@ -92,8 +95,8 @@ private:
      * @return true
      * @return false
      */
-    [[nodiscard]] static constexpr auto is_any_bit_set_impl(const bit_position<RegisterFields...> auto... bit_positions)
-        -> bool
+    [[nodiscard]] static constexpr auto is_any_bit_set_impl(
+        const bit_position<RegisterFields...> auto... bit_positions) noexcept -> bool
     {
         static constexpr auto result_function = [](const auto bitmask) -> bool {
             return (base_t::const_reference() & bitmask) != 0U;
@@ -110,7 +113,7 @@ private:
      * @return false
      */
     [[nodiscard]] static constexpr auto are_all_bits_set_impl(
-        const bit_position<RegisterFields...> auto... bit_positions) -> bool
+        const bit_position<RegisterFields...> auto... bit_positions) noexcept -> bool
     {
         static constexpr auto result_function = [](const auto bitmask) -> bool {
             return (base_t::const_reference() & bitmask) == bitmask;
@@ -132,7 +135,7 @@ public:
      *
      * @return utility::types::register_value_t
      */
-    [[nodiscard]] static constexpr auto get() -> utility::types::register_value_t
+    [[nodiscard]] static constexpr auto get() noexcept -> utility::types::register_value_t
     {
         return base_t::const_reference();
     }
@@ -144,12 +147,12 @@ public:
      * @return true
      * @return false
      */
-    template<bit_position_strict<RegisterFields...> auto... BitPositions>
+    template<bit_position<RegisterFields...> auto... BitPositions>
         requires(base_t::template is_bit_position_in_any_readable_field<
                      static_cast<utility::types::register_size_t>(BitPositions)> and
                  ...) and
                 utility::concepts::are_values_unique<static_cast<utility::types::register_size_t>(BitPositions)...>
-    [[nodiscard]] static constexpr auto is_any_bit_set() -> bool
+    [[nodiscard]] static constexpr auto is_any_bit_set() noexcept -> bool
     {
         return is_any_bit_set_impl(BitPositions...);
     }
@@ -160,7 +163,7 @@ public:
      * @return true
      * @return false
      */
-    [[nodiscard]] static constexpr auto is_any_bit_set() -> bool
+    [[nodiscard]] static constexpr auto is_any_bit_set() noexcept -> bool
     {
         return base_t::const_reference() != 0U;
     }
@@ -177,7 +180,7 @@ public:
                      static_cast<utility::types::register_size_t>(BitPositions)> and
                  ...) and
                 utility::concepts::are_values_unique<static_cast<utility::types::register_size_t>(BitPositions)...>
-    [[nodiscard]] static constexpr auto are_all_bits_set() -> bool
+    [[nodiscard]] static constexpr auto are_all_bits_set() noexcept -> bool
     {
         return are_all_bits_set_impl(BitPositions...);
     }
@@ -188,7 +191,7 @@ public:
      * @return true
      * @return false
      */
-    [[nodiscard]] static constexpr auto are_all_bits_set() -> bool
+    [[nodiscard]] static constexpr auto are_all_bits_set() noexcept -> bool
     {
         static constexpr utility::types::register_value_t all_ones = ~0U;
 
@@ -208,9 +211,8 @@ public:
         requires utility::concepts::are_types_unique_v<Fields...> and
                  (base_t::template are_fields_in_register<Fields...> and
                   base_t::template are_fields_readable<Fields...>)
-    [[nodiscard]] static constexpr auto get_fields() -> utility::types::type_map<Fields...>
+    [[nodiscard]] static constexpr auto get_fields() noexcept -> utility::types::type_map<Fields...>
     {
-        /* Register read. */
         const utility::types::register_value_t register_value = base_t::const_reference();
 
         /* Optimization: if there is only one field in the register, do not use the field bitmask to get its value.
@@ -222,13 +224,12 @@ public:
 #ifndef TSRI_OPTION_NO_OPTIMIZE_GET_FIELDS
         if constexpr (sizeof...(RegisterFields) == 1U)
         {
-            return utility::types::type_map<Fields...[0]>{
-                Fields...[0] ::get_field_value_from_register_value_no_bitmask(register_value)
-            };
+            // TODO: use C++26 pack indexing when compilers have matured
+            return utility::types::type_map<Fields...>{ Fields::get_field_value_from_register_value_no_bitmask(
+                register_value)... };
         }
 #endif
 
-        /* Store the field values in the type map. */
         return utility::types::type_map<Fields...>{ Fields::get_field_value_from_register_value(register_value)... };
     }
 
@@ -245,8 +246,8 @@ public:
          * @return true
          * @return false
          */
-        [[nodiscard]] static constexpr auto is_any_bit_set(const bit_position<RegisterFields...> auto... bit_positions)
-            -> bool
+        [[nodiscard]] static constexpr auto is_any_bit_set(
+            const bit_position<RegisterFields...> auto... bit_positions) noexcept -> bool
         {
             return is_any_bit_set_impl(bit_positions...);
         }
@@ -259,7 +260,7 @@ public:
          * @return false
          */
         [[nodiscard]] static constexpr auto are_all_bits_set(
-            const bit_position<RegisterFields...> auto... bit_positions) -> bool
+            const bit_position<RegisterFields...> auto... bit_positions) noexcept -> bool
         {
             return are_all_bits_set_impl(bit_positions...);
         }

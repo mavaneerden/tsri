@@ -15,11 +15,6 @@ namespace tsri::utility::concepts
 template<typename T, typename... Ts>
 static constexpr bool are_types_unique_v = (!std::is_same_v<T, Ts> and ...) and are_types_unique_v<Ts...>;
 
-/**
- * Used in are_types_unique concept.
- *
- * In case there is only one type.
- */
 template<typename T>
 static constexpr bool are_types_unique_v<T> = true;
 
@@ -27,8 +22,6 @@ static constexpr bool are_types_unique_v<T> = true;
  * @brief Checks if there are no duplicate types in the given variadic template.
  *
  * Source: https://stackoverflow.com/a/76043402
- *
- * @tparam Ts Types to check.
  */
 template<class... Ts>
 concept are_types_unqiue = are_types_unique_v<Ts...>;

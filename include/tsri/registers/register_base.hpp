@@ -21,16 +21,12 @@
 namespace tsri::registers
 {
 
-/* Checks if the `BitPositionCandidate` corresponds to the bit type of any of the `Fields`. */
-template<typename BitPositionCandidate, typename... Fields>
-concept bit_position_strict = (std::is_same_v<BitPositionCandidate, typename Fields::bit_t> or ...);
-
 /* Checks if the `BitPositionCandidate` corresponds to the bit type of any of the `Fields`,
  * or is an unsigned integer.
  */
 template<typename BitPositionCandidate, typename... Fields>
-concept bit_position = (std::is_same_v<BitPositionCandidate, typename Fields::bit_t> or ...) or
-                       std::unsigned_integral<BitPositionCandidate>;
+concept bit_position =
+    (std::is_same_v<BitPositionCandidate, typename Fields::bit> or ...);
 
 /* Number of bits in a register. */
 inline constexpr utility::types::register_size_t num_bits_in_register =
@@ -171,7 +167,7 @@ protected:
      *
      * @return auto& Mutable reference to the register.
      */
-    [[nodiscard]] static inline auto reference() -> auto&
+    [[nodiscard]] static inline auto reference() noexcept -> auto&
     {
         return *std::bit_cast<utility::types::register_ptr_t>(register_address);
     }
@@ -182,7 +178,7 @@ protected:
      *
      * @return auto& Immutable reference to the register.
      */
-    [[nodiscard]] static inline auto const_reference() -> const auto&
+    [[nodiscard]] static inline auto const_reference() noexcept -> const auto&
     {
         return *std::bit_cast<utility::types::register_ptr_t>(register_address);
     }
@@ -193,7 +189,7 @@ protected:
      *
      * @return auto& Mutable reference to the atomic xor on write register.
      */
-    [[nodiscard]] static inline auto atomic_xor_reference() -> auto&
+    [[nodiscard]] static inline auto atomic_xor_reference() noexcept -> auto&
     {
         return *std::bit_cast<utility::types::register_ptr_t>(register_address_atomic_xor);
     }
@@ -204,7 +200,7 @@ protected:
      *
      * @return auto& Mutable reference to the atomic set bitmask on write register.
      */
-    [[nodiscard]] static inline auto atomic_set_reference() -> auto&
+    [[nodiscard]] static inline auto atomic_set_reference() noexcept -> auto&
     {
         return *std::bit_cast<utility::types::register_ptr_t>(register_address_atomic_set);
     }
@@ -215,7 +211,7 @@ protected:
      *
      * @return auto& Mutable reference to the atomic clear bitmask on write register.
      */
-    [[nodiscard]] static inline auto atomic_clear_reference() -> auto&
+    [[nodiscard]] static inline auto atomic_clear_reference() noexcept -> auto&
     {
         return *std::bit_cast<utility::types::register_ptr_t>(register_address_atomic_clear);
     }

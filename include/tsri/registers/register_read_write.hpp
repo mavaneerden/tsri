@@ -39,7 +39,7 @@ private:
         register_write_base<PeripheralBaseAddress, PeripheralBaseAddressOffset, ValueOnReset, RegisterFields...>::
             base_t;
 
-    static constexpr auto set_bits_impl(const bit_position<RegisterFields...> auto... bit_positions)
+    static constexpr auto set_bits_impl(const bit_position<RegisterFields...> auto... bit_positions) noexcept
     {
         const auto bitmask = utility::bit_manipulation::get_bit_positions_bitmask(
             static_cast<utility::types::register_size_t>(bit_positions)...);
@@ -54,7 +54,7 @@ private:
         }
     }
 
-    static constexpr auto clear_bits_impl(const bit_position<RegisterFields...> auto... bit_positions)
+    static constexpr auto clear_bits_impl(const bit_position<RegisterFields...> auto... bit_positions) noexcept
     {
         const auto bitmask = utility::bit_manipulation::get_bit_positions_bitmask(
             static_cast<utility::types::register_size_t>(bit_positions)...);
@@ -69,7 +69,7 @@ private:
         }
     }
 
-    static constexpr auto toggle_bits_impl(const bit_position<RegisterFields...> auto... bit_positions)
+    static constexpr auto toggle_bits_impl(const bit_position<RegisterFields...> auto... bit_positions) noexcept
     {
         const auto bitmask = utility::bit_manipulation::get_bit_positions_bitmask(
             static_cast<utility::types::register_size_t>(bit_positions)...);
@@ -97,12 +97,12 @@ public:
      *
      * @tparam BitPositions
      */
-    template<bit_position_strict<RegisterFields...> auto... BitPositions>
+    template<bit_position<RegisterFields...> auto... BitPositions>
         requires(base_t::template is_bit_position_in_any_settable_field<
                      static_cast<utility::types::register_size_t>(BitPositions)> and
                  ...) and
                 utility::concepts::are_values_unique<static_cast<utility::types::register_size_t>(BitPositions)...>
-    static constexpr auto set_bits()
+    static constexpr auto set_bits() noexcept
     {
         set_bits_impl(BitPositions...);
     }
@@ -112,12 +112,12 @@ public:
      *
      * @tparam BitPositions
      */
-    template<bit_position_strict<RegisterFields...> auto... BitPositions>
+    template<bit_position<RegisterFields...> auto... BitPositions>
         requires(base_t::template is_bit_position_in_any_bit_clearable_field<
                      static_cast<utility::types::register_size_t>(BitPositions)> and
                  ...) and
                 utility::concepts::are_values_unique<static_cast<utility::types::register_size_t>(BitPositions)...>
-    static constexpr auto clear_bits()
+    static constexpr auto clear_bits() noexcept
     {
         clear_bits_impl(BitPositions...);
     }
@@ -127,12 +127,12 @@ public:
      *
      * @tparam BitPositions
      */
-    template<bit_position_strict<RegisterFields...> auto... BitPositions>
+    template<bit_position<RegisterFields...> auto... BitPositions>
         requires(base_t::template is_bit_position_in_any_bit_togglable_field<
                      static_cast<utility::types::register_size_t>(BitPositions)> and
                  ...) and
                 utility::concepts::are_values_unique<static_cast<utility::types::register_size_t>(BitPositions)...>
-    static constexpr auto toggle_bits()
+    static constexpr auto toggle_bits() noexcept
     {
         toggle_bits_impl(BitPositions...);
     }
@@ -142,19 +142,17 @@ public:
      * Equivalent to REG = value1 << shift1 | value2 << shift2 | ... | valueN << shiftN | (~bitmask & REG);
      *
      * @tparam Fields Fields to set.
-     * @param values  Values to set.
      */
     template<typename... Fields>
         requires utility::concepts::are_types_unique_v<Fields...> and
                  (base_t::template are_fields_in_register<Fields...> and
                   base_t::template are_fields_settable<Fields...>)
-    static constexpr auto set_fields(const typename Fields::value_t... values)
+    static constexpr auto set_fields(const Fields&&... fields) noexcept
     {
         /* Register value needs to be cleared at the field positions. */
         const auto cleared_register_value = ~(Fields::bitmask | ...) & base_t::const_reference();
 
-        /* Field values inside the register. */
-        const auto field_values = (Fields::get_register_value_from_field_value(values) | ...);
+        const auto field_values = (Fields::get_register_value_from_field_value(fields.value_internal) | ...);
 
         base_t::reference() = field_values | cleared_register_value;
     }
@@ -173,12 +171,10 @@ public:
         requires utility::concepts::are_types_unique_v<Fields...> and
                  (base_t::template are_fields_in_register<Fields...> and
                   base_t::template are_fields_clearable<Fields...>)
-    static constexpr auto clear_fields()
+    static constexpr auto clear_fields() noexcept
     {
-        /* Bitmask for all fields. */
         static constexpr auto fields_bitmask = (Fields::bitmask | ...);
 
-        /* If atomic operations are supported and there are no WC fields, use the atomic clear. */
         if constexpr (SupportsAtomicBitOperations and !(Fields::is_write_clear or ...))
         {
             base_t::atomic_clear_reference() = fields_bitmask;
@@ -190,7 +186,7 @@ public:
              * OR operation.
              */
             static constexpr auto fields_clear_value =
-                (Fields::get_register_value_from_field_value(static_cast<Fields::value_t>(Fields::clear_value)) | ...);
+                (Fields::get_register_value_from_field_value(static_cast<Fields::value>(Fields::clear_value)) | ...);
 
             base_t::reference() = (~fields_bitmask & base_t::const_reference()) | fields_clear_value;
         }
@@ -200,17 +196,17 @@ public:
         public register_read_only<PeripheralBaseAddress, PeripheralBaseAddressOffset, RegisterFields...>::
             unsafe_operations
     {
-        static constexpr auto set_bits(const bit_position<RegisterFields...> auto... bit_positions)
+        static constexpr auto set_bits(const bit_position<RegisterFields...> auto... bit_positions) noexcept
         {
             set_bits_impl(bit_positions...);
         }
 
-        static constexpr auto clear_bits(const bit_position<RegisterFields...> auto... bit_positions)
+        static constexpr auto clear_bits(const bit_position<RegisterFields...> auto... bit_positions) noexcept
         {
             clear_bits_impl(bit_positions...);
         }
 
-        static constexpr auto toggle_bits(const bit_position<RegisterFields...> auto... bit_positions)
+        static constexpr auto toggle_bits(const bit_position<RegisterFields...> auto... bit_positions) noexcept
         {
             toggle_bits_impl(bit_positions...);
         }

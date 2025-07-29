@@ -22,7 +22,9 @@ using register_ptr_t = volatile register_value_t* const;
 
 /**
  * @brief Size type for register, should at most fit 32 (since there are 32 bits).
+ * This type is the same size as the word size, since it is more efficient. If we use uint8_t for example, the compiler
+ * may add another instruction to "cast" bigger types to this type.
  */
-using register_size_t = uint8_t;
+using register_size_t = uint32_t;
 
-}  // namespace type_safe_register_interface::utility::types
+}  // namespace tsri::utility::types

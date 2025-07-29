@@ -9,6 +9,8 @@
  */
 #pragma once
 
+#include <type_traits>
+
 #include "../registers/register_base.hpp"
 
 namespace tsri::registers
@@ -48,7 +50,7 @@ public:
      * @param value
      */
     [[deprecated("In most cases you'll want to use set_fields_overwrite() instead!")]]
-    static inline auto set(const utility::types::register_value_t value)
+    static inline auto set(const utility::types::register_value_t value) noexcept
     {
         base_t::reference() = value;
     }
@@ -56,7 +58,7 @@ public:
     /**
      * @brief
      */
-    static inline auto reset()
+    static inline auto reset() noexcept
     {
         base_t::reference() = ValueOnReset;
     }
@@ -70,19 +72,17 @@ public:
      * Equivalent to REG = value1 << shift1 | value2 << shift2 | ... | valueN << shiftN | (~bitmask & value_on_reset);
      *
      * @tparam Fields Fields to set.
-     * @param values  Values to set. Each value corresponds to the field in the same position in the variadic template.
      */
     template<typename... Fields>
         requires utility::concepts::are_types_unique_v<Fields...> and
                  (base_t::template are_fields_in_register<Fields...> and
                   base_t::template are_fields_settable<Fields...>)
-    static constexpr auto set_fields_overwrite(const typename Fields::value_t... values)
+    static constexpr auto set_fields_overwrite(const Fields&&... fields) noexcept
     {
         /* Reset value needs to be cleared at the field positions. Luckily this can be done at compile-time :) */
         static constexpr auto cleared_reset_value = ~(Fields::bitmask | ...) & ValueOnReset;
 
-        /* Field values inside the register. */
-        const auto field_values = (Fields::get_register_value_from_field_value(values) | ...);
+        const auto field_values = (Fields::get_register_value_from_field_value(fields.value_internal) | ...);
 
         base_t::reference() = field_values | cleared_reset_value;
     }
@@ -105,24 +105,20 @@ public:
      * Equivalent to REG = value1 << shift1 | value2 << shift2 | ... | valueN << shiftN | (~bitmask & value_on_reset);
      *
      * @tparam Fields Fields to set.
-     * @param values  Values to set. Each value corresponds to the field in the same position in the variadic template.
      */
     template<typename... Fields>
         requires utility::concepts::are_types_unique_v<Fields...> and
                  (base_t::template are_fields_in_register<Fields...> and
                   base_t::template are_fields_settable<Fields...>)
-    static constexpr auto set_fields_overwrite_size_optimized(const typename Fields::value_t... values)
+    static constexpr auto set_fields_overwrite_size_optimized(const Fields&&... fields) noexcept
     {
-        /* Maximum value of the immediate offset in the store instruction. */
+        /* Maximum value of the immediate offset in the store instruction for the Thumb ISA. */
         static constexpr uint32_t isa_offset_max_value = 124U;
 
-        /* Reset value needs to be cleared at the field positions. Luckily this can be done at compile-time :) */
         static constexpr auto cleared_reset_value = ~(Fields::bitmask | ...) & ValueOnReset;
 
-        /* Field values inside the register. */
-        const auto field_values = (Fields::get_register_value_from_field_value(values) | ...);
+        const auto field_values = (Fields::get_register_value_from_field_value(fields.value_internal) | ...);
 
-        /* Register value that we will write to the register. */
         const auto register_value_to_set = field_values | cleared_reset_value;
 
         /* Use a store instruction with immediate offset if the offset fits in the immediate field.

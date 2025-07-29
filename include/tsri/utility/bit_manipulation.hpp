@@ -12,7 +12,7 @@ namespace tsri::utility::bit_manipulation {
      * @param bit_positions
      * @return utility::types::register_value_t
      */
-    static constexpr auto get_bit_positions_bitmask(const std::unsigned_integral auto... bit_positions)
+    static constexpr auto get_bit_positions_bitmask(const std::unsigned_integral auto... bit_positions) noexcept
         -> utility::types::register_value_t
     {
         return ((1U << bit_positions) | ...);

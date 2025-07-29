@@ -7,8 +7,10 @@
  */
 #pragma once
 
+#include <array>
 #include <concepts>
 #include <type_traits>
+#include <utility>
 
 #include "../registers/register_read_write.hpp"
 #include "../registers/register_write_only.hpp"
@@ -83,22 +85,45 @@ class field
         typename... RegisterFields>
     friend class registers::register_read_write;
 
-public:
-    field()                                = delete;
-    field(field&&)                         = delete;
-    field(const field&)                    = delete;
-    auto operator=(field&&) -> field&      = delete;
-    auto operator=(const field&) -> field& = delete;
-    ~field()                               = delete;
+private:
+    /**
+     * @brief True if the given `ValueCandidate` type is considered a field value type. It is so if:
+     * - The field `ValueType` is a scoped enum and `ValueCandidate` is that type OR
+     * - The field `ValueType` is `bool` and `ValueCandidate` is `bool` OR
+     * - `ValueCandidate` is convertible to `ValueType` and unsigned integral.
+     *
+     * @tparam ValueCandidate Type to check.
+     */
+    template<typename ValueCandidate>
+    static constexpr bool is_field_value =
+        (std::is_enum_v<ValueType> or std::is_same_v<ValueType, bool>)
+            ? std::is_same_v<ValueCandidate, ValueType>
+            : (std::is_convertible_v<ValueCandidate, ValueType> and std::unsigned_integral<ValueCandidate>);
 
+    ValueType value_internal;
+
+public:
     /* Type of the field value. If this is a (scoped) enum, this can be used to get the enumeration values. */
-    using value_t = ValueType;
+    using value = ValueType;
 
     /* Field bit type, can be used to get the individual field bit positions in the register. */
-    using bit_t = BitType;
+    using bit = BitType;
 
     /* Value of the field after processor reset. */
-    static constexpr value_t value_on_reset = FieldValueOnReset;
+    static constexpr ValueType value_on_reset = FieldValueOnReset;
+
+    template<typename ValueArgType>
+        requires is_field_value<ValueArgType>
+    constexpr explicit field(const ValueArgType value) :
+        value_internal(static_cast<ValueType>(value))
+    {}
+
+    field()                                = delete;
+    field(field&&)                         = default;
+    field(const field&)                    = default;
+    auto operator=(field&&) -> field&      = default;
+    auto operator=(const field&) -> field& = default;
+    ~field()                               = default;
 
 private:
     /* Whether the field is readable. */
@@ -130,7 +155,6 @@ private:
 
     /* Bitmask of the field inside the register. */
     static constexpr auto bitmask = []() -> utility::types::register_value_t {
-        /* BITS will contain all 1s. */
         static constexpr utility::types::register_value_t one_bits = ~0U;
 
         /**
@@ -161,7 +185,8 @@ private:
      * @param value Value to insert into the field's position in its register.
      * @return utility::types::register_value_t Value shifted and bitmasked into the field's position.
      */
-    static constexpr auto get_register_value_from_field_value(const ValueType value) -> utility::types::register_value_t
+    static constexpr auto get_register_value_from_field_value(const ValueType value) noexcept
+        -> utility::types::register_value_t
     {
         return (static_cast<utility::types::register_value_t>(value) << StartBit) & bitmask;
     }
@@ -172,7 +197,8 @@ private:
      * @param value Register value.
      * @return ValueType Field value, of type value_t.
      */
-    static constexpr auto get_field_value_from_register_value(const utility::types::register_value_t value) -> ValueType
+    static constexpr auto get_field_value_from_register_value(const utility::types::register_value_t value) noexcept
+        -> ValueType
     {
         return static_cast<ValueType>((value & bitmask) >> StartBit);
     }
@@ -184,7 +210,8 @@ private:
      * @param value Register value.
      * @return ValueType Field value, of type value_t.
      */
-    static constexpr auto get_field_value_from_register_value_no_bitmask(const utility::types::register_value_t value) -> ValueType
+    static constexpr auto get_field_value_from_register_value_no_bitmask(
+        const utility::types::register_value_t value) noexcept -> ValueType
     {
         return static_cast<ValueType>((value) >> StartBit);
     }
