@@ -7,10 +7,9 @@
  */
 #pragma once
 
-#include <array>
+#include <climits>
 #include <concepts>
 #include <type_traits>
-#include <utility>
 
 #include "../registers/register_read_write.hpp"
 #include "../registers/register_write_only.hpp"
@@ -33,18 +32,12 @@ namespace tsri::fields
  *
  * @tparam StartBit     Start bit position in the register.
  * @tparam LengthInBits Length of the field in bits
- * @tparam ValueType    Type of the field value. Can be any built-in type or (scoped) enum.
- * @tparam BitType      Enumeration type with bit positions corresponding to the positions of the field's bits inside
- *                      the register.
  */
 template<
-    utility::types::register_size_t StartBit,
-    utility::types::register_size_t LengthInBits,
-    field_types::field_type         TypeOfField,
-    std::semiregular                ValueType,
-    typename BitType,
-    ValueType FieldValueOnReset>
-    requires std::is_scoped_enum_v<BitType>
+    utility::types::register_size_t  StartBit,
+    utility::types::register_size_t  LengthInBits,
+    field_types::field_type          TypeOfField,
+    utility::types::register_value_t FieldValueOnReset>
 class field
 {
     /* Ayo this class has more friends than me... 🥲 */
@@ -85,45 +78,7 @@ class field
         typename... RegisterFields>
     friend class registers::register_read_write;
 
-private:
-    /**
-     * @brief True if the given `ValueCandidate` type is considered a field value type. It is so if:
-     * - The field `ValueType` is a scoped enum and `ValueCandidate` is that type OR
-     * - The field `ValueType` is `bool` and `ValueCandidate` is `bool` OR
-     * - `ValueCandidate` is convertible to `ValueType` and unsigned integral.
-     *
-     * @tparam ValueCandidate Type to check.
-     */
-    template<typename ValueCandidate>
-    static constexpr bool is_field_value =
-        (std::is_enum_v<ValueType> or std::is_same_v<ValueType, bool>)
-            ? std::is_same_v<ValueCandidate, ValueType>
-            : (std::is_convertible_v<ValueCandidate, ValueType> and std::unsigned_integral<ValueCandidate>);
-
-    ValueType value_internal;
-
-public:
-    /* Type of the field value. If this is a (scoped) enum, this can be used to get the enumeration values. */
-    using value = ValueType;
-
-    /* Field bit type, can be used to get the individual field bit positions in the register. */
-    using bit = BitType;
-
-    /* Value of the field after processor reset. */
-    static constexpr ValueType value_on_reset = FieldValueOnReset;
-
-    template<typename ValueArgType>
-        requires is_field_value<ValueArgType>
-    constexpr explicit field(const ValueArgType value) :
-        value_internal(static_cast<ValueType>(value))
-    {}
-
-    field()                                = delete;
-    field(field&&)                         = default;
-    field(const field&)                    = default;
-    auto operator=(field&&) -> field&      = default;
-    auto operator=(const field&) -> field& = default;
-    ~field()                               = default;
+    using this_t = field<StartBit, LengthInBits, TypeOfField, FieldValueOnReset>;
 
 private:
     /* Whether the field is readable. */
@@ -144,15 +99,126 @@ private:
     /* Whether field can be toggled on the bit level. */
     static constexpr bool is_write_clear = std::is_same_v<TypeOfField, field_types::write_clear>;
 
-    /**
-     * @brief True if the given bit position lies inside the field, false otherwise.
-     *
-     * @tparam BitPosition Bit position to check.
-     */
-    template<utility::types::register_size_t BitPosition>
-    static constexpr bool is_bit_position_in_field =
-        BitPosition >= StartBit and BitPosition < (LengthInBits + StartBit);
+protected:
+    class bit
+    {
+        friend this_t;
 
+    private:
+        using field_t = this_t;
+
+        template<typename Field>
+        static constexpr bool is_bit_position_container_in_field = std::derived_from<Field, field_t>;
+
+        utility::types::register_size_t bit_position = 0U;
+
+    public:
+        template<std::unsigned_integral BitPosition>
+        TSRI_INLINE explicit constexpr bit(const BitPosition bit) :
+            bit_position(bit)
+        {}
+
+        bit()                              = delete;
+        bit(bit&&)                         = default;
+        bit(const bit&)                    = default;
+        auto operator=(bit&&) -> bit&      = default;
+        auto operator=(const bit&) -> bit& = default;
+        ~bit()                             = default;
+    };
+
+    class value
+    {
+        template<
+            utility::types::register_address_t PeripheralBaseAddress,
+            utility::types::register_address_t PeripheralBaseAddressOffset,
+            typename... RegisterFields>
+            requires utility::concepts::are_types_unique_v<RegisterFields...>
+        friend class registers::register_base;
+
+        template<
+            utility::types::register_address_t PeripheralBaseAddress,
+            utility::types::register_address_t PeripheralBaseAddressOffset,
+            typename... RegisterFields>
+        friend class registers::register_read_only;
+
+        template<
+            utility::types::register_address_t PeripheralBaseAddress,
+            utility::types::register_address_t PeripheralBaseAddressOffset,
+            utility::types::register_value_t   ValueOnReset,
+            typename... RegisterFields>
+        friend class registers::register_write_base;
+
+        template<
+            utility::types::register_address_t PeripheralBaseAddress,
+            utility::types::register_address_t PeripheralBaseAddressOffset,
+            utility::types::register_value_t   ValueOnReset,
+            bool                               SupportsAtomicBitOperations,
+            typename... RegisterFields>
+        friend class registers::register_write_only;
+
+        template<
+            utility::types::register_address_t PeripheralBaseAddress,
+            utility::types::register_address_t PeripheralBaseAddressOffset,
+            utility::types::register_value_t   ValueOnReset,
+            bool                               SupportsAtomicBitOperations,
+            typename... RegisterFields>
+        friend class registers::register_read_write;
+
+    private:
+        using field_t = this_t;
+
+        template<typename Field>
+        static constexpr bool is_field_value = std::derived_from<Field, field_t>;
+
+        utility::types::register_value_t stored_value = 0U;
+
+    public:
+        template<std::unsigned_integral Value>
+            requires (sizeof(Value) <= sizeof(utility::types::register_value_t))
+        TSRI_INLINE explicit constexpr value(const Value value) :
+            stored_value(static_cast<utility::types::register_value_t>(value))
+        {}
+
+        value()                                = delete;
+        value(value&&)                         = default;
+        value(const value&)                    = default;
+        auto operator=(value&&) -> value&      = default;
+        auto operator=(const value&) -> value& = default;
+        ~value()                               = default;
+
+        TSRI_INLINE operator utility::types::register_value_t() const
+        {
+            return stored_value;
+        }
+    };
+
+private:
+    utility::types::register_value_t stored_bitmask;
+
+public:
+    /* Value of the field after processor reset. */
+    static constexpr value reset_value{ FieldValueOnReset };
+
+    /* Clear value of the register. If it is write-clear, we must write a 1 to clear the field. Otherwise we can write 0
+     * or any value, so just stick to 0.
+     */
+    static constexpr value clear_value{ is_write_clear ? 1U : 0U };
+
+    template<typename... BitPositionContainer>
+        requires (BitPositionContainer::template is_bit_position_container_in_field<this_t> and ...)
+    TSRI_INLINE constexpr explicit field(const BitPositionContainer&... containers) :
+        stored_bitmask(this_t::get_bitmask_from_bit_positions(containers.bit_position...))
+    {}
+
+    field()                                = delete;
+    field(field&&)                         = default;
+    field(const field&)                    = default;
+    auto operator=(field&&) -> field&      = default;
+    auto operator=(const field&) -> field& = default;
+    ~field()                               = default;
+
+
+private:
     /* Bitmask of the field inside the register. */
     static constexpr auto bitmask = []() -> utility::types::register_value_t {
         static constexpr utility::types::register_value_t one_bits = ~0U;
@@ -162,7 +228,8 @@ private:
          * For example, if we want the mask 00111000, the right shift would be 8 - 3 = 5:
          * 11111111 >> 5 = 00000111
          */
-        static constexpr utility::types::register_size_t right_shift = registers::num_bits_in_register - LengthInBits;
+        static constexpr utility::types::register_size_t right_shift =
+            (sizeof(utility::types::register_value_t) * CHAR_BIT) - LengthInBits;
 
         /**
          * Left shift is done to put the number of bits acquired from the right shift in the correct \em position.
@@ -173,11 +240,6 @@ private:
         return (one_bits >> right_shift) << StartBit;
     }();
 
-    /* Clear value of the register. If it is write-clear, we must write a 1 to clear the field. Otherwise we can write 0
-     * or any value, so just stick to 0.
-     */
-    static constexpr utility::types::register_value_t clear_value = is_write_clear ? 1U : 0U;
-
     /**
      * @brief Return the given value shifted and bitmasked to the field's position in its register.
      * Can be used in consteval context.
@@ -185,10 +247,10 @@ private:
      * @param value Value to insert into the field's position in its register.
      * @return utility::types::register_value_t Value shifted and bitmasked into the field's position.
      */
-    static constexpr auto get_register_value_from_field_value(const ValueType value) noexcept
-        -> utility::types::register_value_t
+    TSRI_INLINE static constexpr auto get_register_value_from_field_value(
+        const utility::types::register_value_t value) noexcept -> utility::types::register_value_t
     {
-        return (static_cast<utility::types::register_value_t>(value) << StartBit) & bitmask;
+        return (value << StartBit) & bitmask;
     }
 
     /**
@@ -197,10 +259,10 @@ private:
      * @param value Register value.
      * @return ValueType Field value, of type value_t.
      */
-    static constexpr auto get_field_value_from_register_value(const utility::types::register_value_t value) noexcept
-        -> ValueType
+    TSRI_INLINE static constexpr auto get_field_value_from_register_value(
+        const utility::types::register_value_t value) noexcept -> utility::types::register_value_t
     {
-        return static_cast<ValueType>((value & bitmask) >> StartBit);
+        return (value & bitmask) >> StartBit;
     }
 
     /**
@@ -210,10 +272,16 @@ private:
      * @param value Register value.
      * @return ValueType Field value, of type value_t.
      */
-    static constexpr auto get_field_value_from_register_value_no_bitmask(
-        const utility::types::register_value_t value) noexcept -> ValueType
+    TSRI_INLINE static constexpr auto get_field_value_from_register_value_no_bitmask(
+        const utility::types::register_value_t value) noexcept -> utility::types::register_value_t
     {
-        return static_cast<ValueType>((value) >> StartBit);
+        return value >> StartBit;
+    }
+
+    TSRI_INLINE static constexpr auto get_bitmask_from_bit_positions(const auto... bit_positions)
+        -> utility::types::register_value_t
+    {
+        return ((1U << bit_positions) | ...) << StartBit;
     }
 };
 

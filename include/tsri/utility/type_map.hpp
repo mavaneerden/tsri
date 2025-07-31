@@ -1,10 +1,11 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
-#include <tuple>
-#include <type_traits>
 
 #include "concepts.hpp"
+#include "inline_macro.hpp"
+#include "types.hpp"
 
 namespace tsri::utility::types
 {
@@ -23,10 +24,12 @@ private:
     template<typename Type, typename TypePack>
     static constexpr std::size_t type_pack_index<Type, TypePack> = 0U;
 
-    std::tuple<typename Keys::value...> value_list;
+    std::array<register_value_t, sizeof...(Keys)> value_list;
 
 public:
-    explicit constexpr type_map_impl(const Keys::value... values) :
+    template<std::unsigned_integral... Values>
+        requires (sizeof...(Keys) == sizeof...(Values))
+    TSRI_INLINE explicit constexpr type_map_impl(const Values... values) :
         value_list{ values... }
     {}
 
@@ -39,13 +42,13 @@ public:
 
 #ifdef TSRI_OPTION_ENABLE_STRUCTURED_BINDING_FOR_GET_FIELDS
     template<std::size_t Index>
-    [[nodiscard]] constexpr auto get() const& noexcept -> auto&&
+    [[nodiscard]] TSRI_INLINE constexpr auto get() const& noexcept -> auto&&
     {
         return std::get<Index>(value_list);
     }
 
     template<std::size_t Index>
-    [[nodiscard]] constexpr auto get() const&& noexcept -> auto&&
+    [[nodiscard]] TSRI_INLINE constexpr auto get() const&& noexcept -> auto&&
     {
         return std::get<Index>(value_list);
     }
@@ -54,14 +57,14 @@ public:
 protected:
     template<typename Key>
         requires concepts::is_type_in_list<Key, Keys...>
-    [[nodiscard]] constexpr auto get() const& noexcept -> auto&&
+    [[nodiscard]] TSRI_INLINE constexpr auto get() const& noexcept -> auto&&
     {
         return std::get<type_pack_index<Key, Keys...>>(value_list);
     }
 
     template<typename Key>
         requires concepts::is_type_in_list<Key, Keys...>
-    [[nodiscard]] constexpr auto get() const&& noexcept -> auto&&
+    [[nodiscard]] TSRI_INLINE constexpr auto get() const&& noexcept -> auto&&
     {
         return std::get<type_pack_index<Key, Keys...>>(value_list);
     }
@@ -76,13 +79,13 @@ class type_map : public detail::type_map_impl<Key, Keys...>
 
 public:
     template<typename KeyToGet>
-    [[nodiscard]] constexpr auto get() const& noexcept -> auto&&
+    [[nodiscard]] TSRI_INLINE constexpr auto get() const& noexcept -> auto&&
     {
         return detail::type_map_impl<Key, Keys...>::template get<KeyToGet>();
     }
 
     template<typename KeyToGet>
-    [[nodiscard]] constexpr auto get() const&& noexcept -> auto&&
+    [[nodiscard]] TSRI_INLINE constexpr auto get() const&& noexcept -> auto&&
     {
         return detail::type_map_impl<Key, Keys...>::template get<KeyToGet>();
     }
@@ -94,12 +97,12 @@ class type_map<Key> : public detail::type_map_impl<Key>
     using detail::type_map_impl<Key>::type_map_impl;
 
 public:
-    [[nodiscard]] constexpr auto get() const& noexcept -> auto&&
+    [[nodiscard]] TSRI_INLINE constexpr auto get() const& noexcept -> auto&&
     {
         return detail::type_map_impl<Key>::template get<Key>();
     }
 
-    [[nodiscard]] constexpr auto get() const&& noexcept -> auto&&
+    [[nodiscard]] TSRI_INLINE constexpr auto get() const&& noexcept -> auto&&
     {
         return detail::type_map_impl<Key>::template get<Key>();
     }

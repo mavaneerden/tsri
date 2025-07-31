@@ -16,21 +16,11 @@
 #include <type_traits>
 
 #include "../utility/concepts.hpp"
+#include "../utility/inline_macro.hpp"
 #include "../utility/types.hpp"
 
 namespace tsri::registers
 {
-
-/* Checks if the `BitPositionCandidate` corresponds to the bit type of any of the `Fields`,
- * or is an unsigned integer.
- */
-template<typename BitPositionCandidate, typename... Fields>
-concept bit_position =
-    (std::is_same_v<BitPositionCandidate, typename Fields::bit> or ...);
-
-/* Number of bits in a register. */
-inline constexpr utility::types::register_size_t num_bits_in_register =
-    sizeof(utility::types::register_value_t) * CHAR_BIT;
 
 /**
  * @brief Base class for hardware register representation.
@@ -77,6 +67,19 @@ private:
         register_address + atomic_clear_offset;
 
 protected:
+    /* Checks if the `BitPositionCandidate` corresponds to the bit type of any of the `Fields`,
+     * or is an unsigned integer.
+     */
+    template<typename BitPositionCandidate, typename... Fields>
+    static constexpr bool is_bit_position_container_in =
+        (std::derived_from<Fields, typename BitPositionCandidate::field_t> or ...);
+
+    template<typename T, typename U>
+    struct derived_from_or_same_condition
+    {
+        static constexpr bool value = std::derived_from<T, U> or std::is_same_v<T, U>;
+    };
+
     /**
      * @brief `true` if `Fields` is a subset of the register's fields, `false` otherwise.
      *
@@ -84,7 +87,8 @@ protected:
      */
     template<typename... Fields>
     static constexpr bool are_fields_in_register =
-        (utility::concepts::is_type_in_list_v<Fields, RegisterFields...> and ...);
+        (utility::concepts::is_similar_type_in_list_v<derived_from_or_same_condition, Fields, RegisterFields...> and
+         ...);
 
     /**
      * @brief `true` if ALL `Fields` are readable, `false` otherwise.
@@ -111,55 +115,20 @@ protected:
     static constexpr bool are_fields_clearable = (Fields::is_clearable and ...);
 
     /**
-     * @brief `true` if the `BitPosition` is inside any readable field in the register, `false` otherwise.
+     * @brief `true` if ALL `Fields` are bit-clearable, `false` otherwise.
      *
-     * @tparam BitPosition Bit positoin to check.
+     * @tparam Fields Fields to check.
      */
-    template<utility::types::register_size_t BitPosition>
-    static constexpr bool is_bit_position_in_any_readable_field =
-        ((RegisterFields::template is_bit_position_in_field<BitPosition> and RegisterFields::is_readable) or ...);
+    template<typename... Fields>
+    static constexpr bool are_fields_bit_clearable = (Fields::is_bit_clearable and ...);
 
     /**
-     * @brief `true` if the `BitPosition` is inside any write-only field in the register, `false` otherwise.
+     * @brief `true` if ALL `Fields` are bit-togglable, `false` otherwise.
      *
-     * @tparam BitPosition Bit positoin to check.
+     * @tparam Fields Fields to check.
      */
-    template<utility::types::register_size_t BitPosition>
-    static constexpr bool is_bit_position_in_any_write_only_field =
-        ((RegisterFields::template is_bit_position_in_field<BitPosition> and RegisterFields::is_write_only) or ...);
-
-    /**
-     * @brief `true` if the `BitPosition` is inside any settable field in the register, `false` otherwise.
-     *
-     * @tparam BitPosition Bit positoin to check.
-     */
-    template<utility::types::register_size_t BitPosition>
-    static constexpr bool is_bit_position_in_any_settable_field =
-        ((RegisterFields::template is_bit_position_in_field<BitPosition> and RegisterFields::is_settable) or ...);
-
-    /**
-     * @brief `true` if the `BitPosition` is inside any bit-clearable field in the register, `false` otherwise.
-     *
-     * @tparam BitPosition Bit positoin to check.
-     */
-    template<utility::types::register_size_t BitPosition>
-    static constexpr bool is_bit_position_in_any_bit_clearable_field =
-        ((RegisterFields::template is_bit_position_in_field<BitPosition> and RegisterFields::is_bit_clearable) or ...);
-
-    /**
-     * @brief `true` if the `BitPosition` is inside any bit-togglable field in the register, `false` otherwise.
-     *
-     * @tparam BitPosition Bit positoin to check.
-     */
-    template<utility::types::register_size_t BitPosition>
-    static constexpr bool is_bit_position_in_any_bit_togglable_field =
-        ((RegisterFields::template is_bit_position_in_field<BitPosition> and RegisterFields::is_bit_togglable) or ...);
-
-    /* NOLINTBEGIN(readability-redundant-inline-specifier)
-     * Inline is actually not redundant here. On GCC with -Og, these functions are not inlined without the `inline` or
-     * `constexpr` specifier. Constexpr would work, but in my opinion it is not the correct keyword to use because these
-     * functions can never be evaluated at compile time: it is a cast to a volatile pointer.
-     */
+    template<typename... Fields>
+    static constexpr bool are_fields_bit_togglable = (Fields::is_bit_togglable and ...);
 
     /**
      * @brief Returns a mutable reference to the hardware register, which should be used to write to the register in
@@ -167,7 +136,7 @@ protected:
      *
      * @return auto& Mutable reference to the register.
      */
-    [[nodiscard]] static inline auto reference() noexcept -> auto&
+    [[nodiscard]] TSRI_INLINE static auto reference() noexcept -> auto&
     {
         return *std::bit_cast<utility::types::register_ptr_t>(register_address);
     }
@@ -178,7 +147,7 @@ protected:
      *
      * @return auto& Immutable reference to the register.
      */
-    [[nodiscard]] static inline auto const_reference() noexcept -> const auto&
+    [[nodiscard]] TSRI_INLINE static auto const_reference() noexcept -> const auto&
     {
         return *std::bit_cast<utility::types::register_ptr_t>(register_address);
     }
@@ -189,7 +158,7 @@ protected:
      *
      * @return auto& Mutable reference to the atomic xor on write register.
      */
-    [[nodiscard]] static inline auto atomic_xor_reference() noexcept -> auto&
+    [[nodiscard]] TSRI_INLINE static auto atomic_xor_reference() noexcept -> auto&
     {
         return *std::bit_cast<utility::types::register_ptr_t>(register_address_atomic_xor);
     }
@@ -200,7 +169,7 @@ protected:
      *
      * @return auto& Mutable reference to the atomic set bitmask on write register.
      */
-    [[nodiscard]] static inline auto atomic_set_reference() noexcept -> auto&
+    [[nodiscard]] TSRI_INLINE static auto atomic_set_reference() noexcept -> auto&
     {
         return *std::bit_cast<utility::types::register_ptr_t>(register_address_atomic_set);
     }
@@ -211,7 +180,7 @@ protected:
      *
      * @return auto& Mutable reference to the atomic clear bitmask on write register.
      */
-    [[nodiscard]] static inline auto atomic_clear_reference() noexcept -> auto&
+    [[nodiscard]] TSRI_INLINE static auto atomic_clear_reference() noexcept -> auto&
     {
         return *std::bit_cast<utility::types::register_ptr_t>(register_address_atomic_clear);
     }

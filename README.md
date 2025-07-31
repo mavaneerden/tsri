@@ -28,26 +28,31 @@ const auto field2_value = fields.get<reg::field2>();
 const auto [field1_value, field2_value, ...] = reg::get_fields<reg::field1, reg::field2, ...>();
 
 // Check if any of the given bits are set
-const bool result = reg::is_any_bit_set(reg::field1::bit::BIT0, reg::field2::bit::BIT3, ...);
+const bool result = reg::is_any_bit_set(
+    reg::field1 {
+        reg::field1::bit::BIT0,
+        reg::field1::bit{ 3U }
+    },
+    reg::field2 {
+        reg::field2::bit::BIT1
+    },
+    ...
+);
 
 // Check if all of the given bits are set
-const bool result = reg::are_all_bits_set(reg::field1::bit::BIT0, reg::field2::bit::BIT2, ...);
+const bool result = reg::are_all_bits_set( ... ); // same format as is_any_bit_set
 
 // Set the given fields to the given values
 reg::set_fields(
-    reg::field1{ reg::field1::value::SOME_VALUE },
-    reg::field2{ true },
-    reg::field3{ reg::field3::value_on_reset },
+    reg::field1::value::SOME_VALUE,
+    reg::field2::value{ 4U },
+    reg::field3::reset_value,
     ...
 );
 
 // Set the given fields to the given values, overwriting the
 // unspecified register fields with their reset value.
-reg::set_fields_overwrite(
-    reg::field1{ reg::field1::value::SOME_VALUE },
-    reg::field2{ true },
-    ...
-);
+reg::set_fields_overwrite( ... ); // same format as set_fields
 
 ```
 

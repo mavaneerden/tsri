@@ -39,51 +39,6 @@ private:
         register_write_base<PeripheralBaseAddress, PeripheralBaseAddressOffset, ValueOnReset, RegisterFields...>::
             base_t;
 
-    static constexpr auto set_bits_impl(const bit_position<RegisterFields...> auto... bit_positions) noexcept
-    {
-        const auto bitmask = utility::bit_manipulation::get_bit_positions_bitmask(
-            static_cast<utility::types::register_size_t>(bit_positions)...);
-
-        if constexpr (SupportsAtomicBitOperations)
-        {
-            base_t::atomic_set_reference() = bitmask;
-        }
-        else
-        {
-            base_t::reference() = bitmask | base_t::const_reference();
-        }
-    }
-
-    static constexpr auto clear_bits_impl(const bit_position<RegisterFields...> auto... bit_positions) noexcept
-    {
-        const auto bitmask = utility::bit_manipulation::get_bit_positions_bitmask(
-            static_cast<utility::types::register_size_t>(bit_positions)...);
-
-        if constexpr (SupportsAtomicBitOperations)
-        {
-            base_t::atomic_clear_reference() = bitmask;
-        }
-        else
-        {
-            base_t::reference() = ~bitmask & base_t::const_reference();
-        }
-    }
-
-    static constexpr auto toggle_bits_impl(const bit_position<RegisterFields...> auto... bit_positions) noexcept
-    {
-        const auto bitmask = utility::bit_manipulation::get_bit_positions_bitmask(
-            static_cast<utility::types::register_size_t>(bit_positions)...);
-
-        if constexpr (SupportsAtomicBitOperations)
-        {
-            base_t::atomic_xor_reference() = bitmask;
-        }
-        else
-        {
-            base_t::reference() = bitmask ^ base_t::const_reference();
-        }
-    }
-
 public:
     register_read_write()                                              = delete;
     register_read_write(register_read_write&&)                         = delete;
@@ -93,66 +48,21 @@ public:
     ~register_read_write()                                             = delete;
 
     /**
-     * @brief
-     *
-     * @tparam BitPositions
-     */
-    template<bit_position<RegisterFields...> auto... BitPositions>
-        requires(base_t::template is_bit_position_in_any_settable_field<
-                     static_cast<utility::types::register_size_t>(BitPositions)> and
-                 ...) and
-                utility::concepts::are_values_unique<static_cast<utility::types::register_size_t>(BitPositions)...>
-    static constexpr auto set_bits() noexcept
-    {
-        set_bits_impl(BitPositions...);
-    }
-
-    /**
-     * @brief
-     *
-     * @tparam BitPositions
-     */
-    template<bit_position<RegisterFields...> auto... BitPositions>
-        requires(base_t::template is_bit_position_in_any_bit_clearable_field<
-                     static_cast<utility::types::register_size_t>(BitPositions)> and
-                 ...) and
-                utility::concepts::are_values_unique<static_cast<utility::types::register_size_t>(BitPositions)...>
-    static constexpr auto clear_bits() noexcept
-    {
-        clear_bits_impl(BitPositions...);
-    }
-
-    /**
-     * @brief
-     *
-     * @tparam BitPositions
-     */
-    template<bit_position<RegisterFields...> auto... BitPositions>
-        requires(base_t::template is_bit_position_in_any_bit_togglable_field<
-                     static_cast<utility::types::register_size_t>(BitPositions)> and
-                 ...) and
-                utility::concepts::are_values_unique<static_cast<utility::types::register_size_t>(BitPositions)...>
-    static constexpr auto toggle_bits() noexcept
-    {
-        toggle_bits_impl(BitPositions...);
-    }
-
-    /**
      * @brief Set provided fields to the provided values. Does not overwrite existing register data.
      * Equivalent to REG = value1 << shift1 | value2 << shift2 | ... | valueN << shiftN | (~bitmask & REG);
      *
      * @tparam Fields Fields to set.
      */
-    template<typename... Fields>
-        requires utility::concepts::are_types_unique_v<Fields...> and
-                 (base_t::template are_fields_in_register<Fields...> and
-                  base_t::template are_fields_settable<Fields...>)
-    static constexpr auto set_fields(const Fields&&... fields) noexcept
+    template<typename... Values>
+        requires utility::concepts::are_types_unique_v<typename Values::field_t...> and
+                 (base_t::template are_fields_in_register<typename Values::field_t...> and
+                  base_t::template are_fields_settable<typename Values::field_t...>)
+    TSRI_INLINE static constexpr auto set_fields(const Values&... values) noexcept
     {
         /* Register value needs to be cleared at the field positions. */
-        const auto cleared_register_value = ~(Fields::bitmask | ...) & base_t::const_reference();
+        const auto cleared_register_value = ~(Values::field_t::bitmask | ...) & base_t::const_reference();
 
-        const auto field_values = (Fields::get_register_value_from_field_value(fields.value_internal) | ...);
+        const auto field_values = (Values::field_t::get_register_value_from_field_value(values) | ...);
 
         base_t::reference() = field_values | cleared_register_value;
     }
@@ -171,7 +81,7 @@ public:
         requires utility::concepts::are_types_unique_v<Fields...> and
                  (base_t::template are_fields_in_register<Fields...> and
                   base_t::template are_fields_clearable<Fields...>)
-    static constexpr auto clear_fields() noexcept
+    TSRI_INLINE static constexpr auto clear_fields() noexcept
     {
         static constexpr auto fields_bitmask = (Fields::bitmask | ...);
 
@@ -192,25 +102,59 @@ public:
         }
     }
 
-    struct unsafe_operations :
-        public register_read_only<PeripheralBaseAddress, PeripheralBaseAddressOffset, RegisterFields...>::
-            unsafe_operations
+    template<typename... Fields>
+        requires utility::concepts::are_types_unique_v<Fields...> and
+                 (base_t::template are_fields_in_register<Fields...>) and
+                 (base_t::template are_fields_settable<Fields...>)
+    TSRI_INLINE static constexpr auto set_bits(const Fields&&... fields) noexcept
     {
-        static constexpr auto set_bits(const bit_position<RegisterFields...> auto... bit_positions) noexcept
-        {
-            set_bits_impl(bit_positions...);
-        }
+        const auto bitmask = (fields.stored_bitmask | ...);
 
-        static constexpr auto clear_bits(const bit_position<RegisterFields...> auto... bit_positions) noexcept
+        if constexpr (SupportsAtomicBitOperations)
         {
-            clear_bits_impl(bit_positions...);
+            base_t::atomic_set_reference() = bitmask;
         }
+        else
+        {
+            base_t::reference() = bitmask | base_t::const_reference();
+        }
+    }
 
-        static constexpr auto toggle_bits(const bit_position<RegisterFields...> auto... bit_positions) noexcept
+    template<typename... Fields>
+        requires utility::concepts::are_types_unique_v<Fields...> and
+                 (base_t::template are_fields_in_register<Fields...>) and
+                 (base_t::template are_fields_bit_clearable<Fields...>)
+    TSRI_INLINE static constexpr auto clear_bits(const Fields&&... fields) noexcept
+    {
+        const auto bitmask = (fields.stored_bitmask | ...);
+
+        if constexpr (SupportsAtomicBitOperations)
         {
-            toggle_bits_impl(bit_positions...);
+            base_t::atomic_clear_reference() = bitmask;
         }
-    };
+        else
+        {
+            base_t::reference() = ~bitmask & base_t::const_reference();
+        }
+    }
+
+    template<typename... Fields>
+        requires utility::concepts::are_types_unique_v<Fields...> and
+                 (base_t::template are_fields_in_register<Fields...>) and
+                 (base_t::template are_fields_bit_togglable<Fields...>)
+    TSRI_INLINE static constexpr auto toggle_bits(const Fields&&... fields) noexcept
+    {
+        const auto bitmask = (fields.stored_bitmask | ...);
+
+        if constexpr (SupportsAtomicBitOperations)
+        {
+            base_t::atomic_xor_reference() = bitmask;
+        }
+        else
+        {
+            base_t::reference() = bitmask ^ base_t::const_reference();
+        }
+    }
 };
 
 }  // namespace tsri::registers

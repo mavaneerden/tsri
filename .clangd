@@ -16,10 +16,11 @@ Diagnostics:
       performance-*
     ]
     Remove: [
-      performance-enum-size,       # Size gain is very minimal
-      google-readability-todo,     # I don't want to have to write authors at every TODO >:(
-      misc-misplaced-const,        # Sometimes thinks `int const *` is the same as `int * const`
-      misc-use-anonymous-namespace # I prefer static over anonymous namespaces
+      performance-enum-size,                  # Size gain is very minimal
+      google-readability-todo,                # I don't want to have to write authors at every TODO >:(
+      misc-misplaced-const,                   # Sometimes thinks `int const *` is the same as `int * const`
+      misc-use-anonymous-namespace,           # I prefer static over anonymous namespaces
+      readability-redundant-inline-specifier  # Not always redundant for GCC
     ]
     FastCheckFilter: None
 Hover:

@@ -50,7 +50,7 @@ public:
      * @param value
      */
     [[deprecated("In most cases you'll want to use set_fields_overwrite() instead!")]]
-    static inline auto set(const utility::types::register_value_t value) noexcept
+    TSRI_INLINE static auto set(const utility::types::register_value_t value) noexcept
     {
         base_t::reference() = value;
     }
@@ -58,7 +58,7 @@ public:
     /**
      * @brief
      */
-    static inline auto reset() noexcept
+    TSRI_INLINE static auto reset() noexcept
     {
         base_t::reference() = ValueOnReset;
     }
@@ -73,16 +73,16 @@ public:
      *
      * @tparam Fields Fields to set.
      */
-    template<typename... Fields>
-        requires utility::concepts::are_types_unique_v<Fields...> and
-                 (base_t::template are_fields_in_register<Fields...> and
-                  base_t::template are_fields_settable<Fields...>)
-    static constexpr auto set_fields_overwrite(const Fields&&... fields) noexcept
+    template<typename... Values>
+        requires utility::concepts::are_types_unique_v<typename Values::field_t...> and
+                 (base_t::template are_fields_in_register<typename Values::field_t...> and
+                  base_t::template are_fields_settable<typename Values::field_t...>)
+    TSRI_INLINE static constexpr auto set_fields_overwrite(const Values&... values) noexcept
     {
         /* Reset value needs to be cleared at the field positions. Luckily this can be done at compile-time :) */
-        static constexpr auto cleared_reset_value = ~(Fields::bitmask | ...) & ValueOnReset;
+        static constexpr auto cleared_reset_value = ~(Values::field_t::bitmask | ...) & ValueOnReset;
 
-        const auto field_values = (Fields::get_register_value_from_field_value(fields.value_internal) | ...);
+        const auto field_values = (Values::field_t::get_register_value_from_field_value(values) | ...);
 
         base_t::reference() = field_values | cleared_reset_value;
     }
@@ -106,18 +106,18 @@ public:
      *
      * @tparam Fields Fields to set.
      */
-    template<typename... Fields>
-        requires utility::concepts::are_types_unique_v<Fields...> and
-                 (base_t::template are_fields_in_register<Fields...> and
-                  base_t::template are_fields_settable<Fields...>)
-    static constexpr auto set_fields_overwrite_size_optimized(const Fields&&... fields) noexcept
+    template<typename... Values>
+        requires utility::concepts::are_types_unique_v<typename Values::field_t...> and
+                 (base_t::template are_fields_in_register<typename Values::field_t...> and
+                  base_t::template are_fields_settable<typename Values::field_t...>)
+    TSRI_INLINE static constexpr auto set_fields_overwrite_size_optimized(const Values&... values) noexcept
     {
         /* Maximum value of the immediate offset in the store instruction for the Thumb ISA. */
         static constexpr uint32_t isa_offset_max_value = 124U;
 
-        static constexpr auto cleared_reset_value = ~(Fields::bitmask | ...) & ValueOnReset;
+        static constexpr auto cleared_reset_value = ~(Values::field_t::bitmask | ...) & ValueOnReset;
 
-        const auto field_values = (Fields::get_register_value_from_field_value(fields.value_internal) | ...);
+        const auto field_values = (Values::field_t::get_register_value_from_field_value(values) | ...);
 
         const auto register_value_to_set = field_values | cleared_reset_value;
 

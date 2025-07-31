@@ -10,7 +10,6 @@
 #pragma once
 
 #include "../registers/register_write_base.hpp"
-#include "../utility/bit_manipulation.hpp"
 
 namespace tsri::registers
 {
@@ -38,20 +37,6 @@ private:
     using write_base_t =
         register_write_base<PeripheralBaseAddress, PeripheralBaseAddressOffset, ValueOnReset, RegisterFields...>;
 
-    /**
-     * @brief
-     *
-     * @param bit_positions
-     * @return
-     */
-    static constexpr auto set_bits_impl(const bit_position<RegisterFields...> auto... bit_positions) noexcept
-    {
-        static constexpr auto bitmask = utility::bit_manipulation::get_bit_positions_bitmask(
-            static_cast<utility::types::register_size_t>(bit_positions)...);
-
-        write_base_t::reference() = bitmask;
-    }
-
 public:
     register_write_only()                                              = delete;
     register_write_only(register_write_only&&)                         = delete;
@@ -60,37 +45,14 @@ public:
     auto operator=(const register_write_only&) -> register_write_only& = delete;
     ~register_write_only()                                             = delete;
 
-    /**
-     * @brief
-     *
-     * @tparam BitPositions
-     */
-    template<bit_position<RegisterFields...> auto... BitPositions>
-        requires(write_base_t::template is_bit_position_in_any_write_only_field<
-                     static_cast<utility::types::register_size_t>(BitPositions)> and
-                 ...) and
-                utility::concepts::are_values_unique<static_cast<utility::types::register_size_t>(BitPositions)...>
-    static constexpr auto set_bits() noexcept
+    template<typename... Fields>
+        requires utility::concepts::are_types_unique_v<Fields...> and
+                 (write_base_t::template are_fields_in_register<Fields...>)
+    /* No need for field check here: all fields are write-only. */
+    TSRI_INLINE static constexpr auto set_bits(const Fields&&... fields) noexcept
     {
-        set_bits_impl(BitPositions...);
+        write_base_t::reference() = (fields.stored_bitmask | ...);
     }
-
-    /**
-     * @brief
-     *
-     */
-    struct unsafe_operations
-    {
-        /**
-         * @brief
-         *
-         * @param bit_positions
-         */
-        static constexpr auto set_bits(const bit_position<RegisterFields...> auto... bit_positions) noexcept
-        {
-            set_bits_impl(bit_positions...);
-        }
-    };
 };
 
 }  // namespace tsri::registers

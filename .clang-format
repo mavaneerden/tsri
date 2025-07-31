@@ -229,7 +229,7 @@ SpaceBeforeCpp11BracedList: false
 SpaceBeforeCtorInitializerColon: true
 SpaceBeforeInheritanceColon: true
 SpaceBeforeJsonColon: false
-SpaceBeforeParens: ControlStatementsExceptControlMacros
+SpaceBeforeParens: Custom
 SpaceBeforeParensOptions:
   AfterControlStatements: true
   AfterForeachMacros: true
@@ -238,8 +238,8 @@ SpaceBeforeParensOptions:
   AfterIfMacros: true
   AfterOverloadedOperator: false
   AfterPlacementOperator: true
-  AfterRequiresInClause: false
-  AfterRequiresInExpression: false
+  AfterRequiresInClause: true
+  AfterRequiresInExpression: true
   BeforeNonEmptyParentheses: false
 SpaceBeforeRangeBasedForLoopColon: true
 SpaceBeforeSquareBrackets: false
