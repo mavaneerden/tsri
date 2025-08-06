@@ -208,29 +208,27 @@ int main(int argc, char** argv)
     // auto result = test_register_rw::is_any_bit_set(
     //     test_field_rw{ test_field_rw::bit::BIT0, test_field_rw::bit::BIT1 }, test_field_ro{ test_field_ro::bit::BIT0 });
 
-    test_register_rw::set_fields(test_field_rw::value::SOME_VALUE, test_field_any_value::value{ 78U }, test_field_wo::reset_value);
+    test_register_rw::set_fields(test_field_rw::value::SOME_VALUE, test_field_any_value::value{ 0U }, test_field_wo::reset_value);
+
+    auto x = 0U == test_field_rw::value::SOME_VALUE;
 
 
-    // test_register_rw::set_bits(
-    //     test_field_rw::bits {
-    //         test_field_rw::bits::BIT0,
-    //         test_field_rw::bits::BIT3,
-    //         test_field_rw::bits{argc_unsigned}
-    //     },
-    //     test_field_wo::bits {
-    //         test_field_wo::bits::BIT0,
-    //         test_field_wo::bits::BIT3
-    //     }
-    // );
+    test_register_rw::set_bits(
+        test_field_rw {
+            test_field_rw::bit::BIT0,
+            test_field_rw::bit::BIT3,
+            test_field_rw::bit{argc_unsigned}
+        },
+        test_field_wo {
+            test_field_wo::bit::BIT0,
+            test_field_wo::bit::BIT3
+        }
+    );
 
-    // test_register_rw::set_fields_overwrite(
-    //     test_field_rw{
-    //         test_field_rw::value::SOME_VALUE2
-    //     },
-    //     test_field_wo{
-    //         true
-    //     }
-    // );
+    test_register_rw::set_fields_overwrite(
+        test_field_rw::value::SOME_VALUE2,
+        test_field_any_value::value{ result }
+    );
 
     // test_register_rw::set(1u);
     // test_register_rw::reset();

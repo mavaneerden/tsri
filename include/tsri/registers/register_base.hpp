@@ -67,12 +67,6 @@ private:
         register_address + atomic_clear_offset;
 
 protected:
-    /* Checks if the `BitPositionCandidate` corresponds to the bit type of any of the `Fields`,
-     * or is an unsigned integer.
-     */
-    template<typename BitPositionCandidate, typename... Fields>
-    static constexpr bool is_bit_position_container_in =
-        (std::derived_from<Fields, typename BitPositionCandidate::field_t> or ...);
 
     template<typename T, typename U>
     struct derived_from_or_same_condition

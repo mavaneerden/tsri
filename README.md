@@ -1,10 +1,23 @@
-# Type-Safe Register Interface (TSRI)
+# Type-Safer Register Interface (TSRI)
 
-This repository contains a zero-overhead* header-only type-safe peripheral register interface.
-It can be used to access the hardware registers in a baremetal environment.
+The goal of this repository is to experiment with a zero-runtime-overhead* header-only peripheral register interface that is more type-safe than common register abstractions, such as CMSIS's unions.
+
+Some ways it achieves more type safety:
+- Fields with enumerated values cannot be set to a different value.
+- Fields that consist of one bit cannot be set to anything other than 1 or 0.
+- Read-only fields cannot be written.
+- Write-only fields cannot be read.
+- Write-clear fields can only be set to 1.
+- Self-clearing fields can only be set to 1.
+
+In addition, there are some measures that make it harder for the user to create bugs:
+- Field bits can only be set inside that field: avoids confusing different bit positions between different fields.
+- Field values can only be set inside the register that the fields belong to: avoids confusing different fields between different registers.
+- A field cannot be set more than once per operation: avoids unintended duplicate operations.
+- Field values and bit positions are automatically shifted and bitmasked correctly: no manual fidgetting with shifts and bitmasks, which is error-prone.
 
 
-*when using optimization level bigger than -O0
+*when using optimization level bigger than -Og and not defining TSRI_OPTION_DISABLE_ALWAYS_INLINE
 
 ## Usage
 
@@ -31,7 +44,7 @@ const auto [field1_value, field2_value, ...] = reg::get_fields<reg::field1, reg:
 const bool result = reg::is_any_bit_set(
     reg::field1 {
         reg::field1::bit::BIT0,
-        reg::field1::bit{ 3U }
+        reg::field1::bit{ runtime_variable }
     },
     reg::field2 {
         reg::field2::bit::BIT1
@@ -59,6 +72,12 @@ reg::set_fields_overwrite( ... ); // same format as set_fields
 
 ## Supported devices
 Currently, only the RP2040 processor is supported.
+
+## Limitations
+- Compiling is somewhat slow because of all the templated code
+- Constant values for fields that can have any value are not checked
+  - It is possible to use a template for this, but it could be confusing since there would be two possible value constructors with different syntax
+- Runtime variables are not checked
 
 ## Disclaimer
 No AI was used in the making of TSRI. All code is hand-written by me, except when explicitly stated otherwise.

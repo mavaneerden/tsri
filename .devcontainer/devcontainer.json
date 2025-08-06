@@ -1,5 +1,5 @@
 {
-    "name": "Type-Safe Register Interface",
+    "name": "Type-Safer Register Interface",
     "build": {
         "context": "..",
         "dockerfile": "../Dockerfile"

@@ -44,16 +44,18 @@ public:
 
     // NOLINTBEGIN(readability-redundant-inline-specifier)
 
-    /**
-     * @brief
-     *
-     * @param value
-     */
-    [[deprecated("In most cases you'll want to use set_fields_overwrite() instead!")]]
-    TSRI_INLINE static auto set(const utility::types::register_value_t value) noexcept
+    struct unsafe
     {
-        base_t::reference() = value;
-    }
+        /**
+        * @brief
+        *
+        * @param value
+        */
+        TSRI_INLINE static auto set(const utility::types::register_value_t value) noexcept
+        {
+            base_t::reference() = value;
+        }
+    };
 
     /**
      * @brief
