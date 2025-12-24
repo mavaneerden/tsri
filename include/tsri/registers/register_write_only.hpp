@@ -34,8 +34,8 @@ class register_write_only :
 {
 private:
     /* */
-    using write_base_t =
-        register_write_base<PeripheralBaseAddress, PeripheralBaseAddressOffset, ValueOnReset, RegisterFields...>;
+    using base_t =
+        register_write_base<PeripheralBaseAddress, PeripheralBaseAddressOffset, ValueOnReset, RegisterFields...>::base_t;
 
 public:
     register_write_only()                                              = delete;
@@ -47,11 +47,11 @@ public:
 
     template<typename... Fields>
         requires utility::concepts::are_types_unique_v<Fields...> and
-                 (write_base_t::template are_fields_in_register<Fields...>)
+                 (base_t::template are_fields_in_register<Fields...>)
     /* No need for field check here: all fields are write-only. */
     TSRI_INLINE static constexpr auto set_bits(const Fields&&... fields) noexcept
     {
-        write_base_t::reference() = (fields.stored_bitmask | ...);
+        base_t::reference() = (fields.stored_bitmask | ...);
     }
 };
 

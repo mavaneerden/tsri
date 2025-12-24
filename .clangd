@@ -33,16 +33,23 @@ InlayHints:
   DeducedTypes: true
   DefaultArguments: true
   TypeNameLimit: 24
-
+Documentation:
+  CommentFormat: Doxygen
 ---
 CompileFlags:
   Add: [
-    -isystem/usr/include/c++/11,
-    -isystem/usr/include/x86_64-linux-gnu/c++/11,
-    -isystem/usr/include/c++/11/backward,
-    -isystem/usr/lib/gcc/x86_64-linux-gnu/11/include,
-    -isystem/usr/local/include,
-    -isystem/usr/include,
+    -isystem,
+    /workspaces/tsri/examples/toolchain/arm-none-eabi/include/c++/14.3.1,
+    -isystem,
+    /workspaces/tsri/examples/toolchain/arm-none-eabi/include/c++/14.3.1/arm-none-eabi,
+    -isystem,
+    /workspaces/tsri/examples/toolchain/arm-none-eabi/include/c++/14.3.1/backward,
+    -isystem,
+    /workspaces/tsri/examples/toolchain/lib/gcc/arm-none-eabi/14.3.1/include,
+    -isystem,
+    /workspaces/tsri/examples/toolchain/lib/gcc/arm-none-eabi/14.3.1/include-fixed,
+    -isystem,
+    /workspaces/tsri/examples/toolchain/arm-none-eabi/include,
     -std=c++2c,
     -mthumb,
     -Weverything,
@@ -63,9 +70,8 @@ Index:
   Background: Skip
 ---
 If:
-  PathMatch: examples/.*
+  PathMatch: .*/examples/rp2040/.*
 CompileFlags:
-  CompilationDatabase: build/debug/
+  CompilationDatabase: build/
   Add: [
-    -I/workspaces/repository/install/include
   ]

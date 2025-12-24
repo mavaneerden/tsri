@@ -6,7 +6,7 @@ ARG GROUP_ID=1000
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
-RUN apt-get update && apt-get install -y build-essential git gcc-multilib
+RUN apt-get update && apt-get install -y build-essential git
 RUN apt-get install -y unzip
 # Codegen
 RUN apt-get install -y python3-pip && python3 -m pip install -U cmsis-svd jinja2
@@ -27,19 +27,11 @@ RUN adduser user sudo
 # sudo command by ammending sudoers file
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-# Remove the sudo messasge1
+# Remove the sudo message
 RUN touch /home/user/.sudo_as_admin_successful
 
 # Change the working directory
 WORKDIR /home/user
-
-# Install newer version of ninja.
-# This was required for modules. Ninja sucks because it seems to have hidden caching things going on,
-# so it will sometimes just not build the correct version of your code.
-# But it is kept here just in case I ever want to get into modules.
-RUN wget https://github.com/ninja-build/ninja/releases/download/v1.13.0/ninja-linux.zip
-RUN unzip ninja-linux.zip
-RUN cp ninja /usr/bin/ninja
 
 # Install latest version of cmake.
 # This was required for modules, but it's good to use the latest version anyways.
@@ -51,9 +43,14 @@ RUN apt install -y cmake
 # Install newer version of clang-format & clangd
 RUN wget https://apt.llvm.org/llvm.sh
 RUN chmod +x llvm.sh
-RUN ./llvm.sh 20
-RUN apt install -y clang-format-20 clangd-20
+RUN ./llvm.sh 22
+RUN apt install -y clang-format-22 clangd-22 clang-22
 RUN rm llvm.sh
+
+RUN ln -s $(which clang-22) /usr/bin/clang
+RUN ln -s $(which clang++-22) /usr/bin/clang++
+RUN ln -s $(which llvm-objcopy-22) /usr/bin/llvm-objcopy
+RUN ln -s $(which llvm-objdump-22) /usr/bin/llvm-objdump
 
 # Change the user
 USER user

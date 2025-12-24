@@ -37,3 +37,4 @@ build/
 install/
 .cache/
 .vscode/settings.json
+__pycache__

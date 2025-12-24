@@ -1,0 +1,25 @@
+
+{% if register.description != "" %}
+/*{{ register.description }}*/
+{% endif %}
+struct {{ register.name}} :
+    public tsri::registers::register_{{ register.access_type.value | replace('-', '_') }}<
+        0x{{ '%X' % register.base_address }}U,
+        0x{{ '%X' % register.address_offset }}U,
+        {% if register.access_type.value != "read-only" %}
+            {{ register.value_on_reset }}U,
+            {{ "true" if register.supports_atomic_bit_operations else "false" }},
+        {% endif %}
+        {% for field in register.fields %}
+        {{ get_field_base_name(register, field) }}{% if not loop.last %},
+        {% endif %}
+        {% endfor %}
+    >
+{
+    {% for field in register.fields %}
+    {% with field=field, register=register, peripheral=peripheral %}
+        {% include "field.jinja2" %}
+
+    {% endwith %}
+    {% endfor %}
+};

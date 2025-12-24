@@ -9,8 +9,6 @@
  */
 #pragma once
 
-#include <type_traits>
-
 #include "../registers/register_base.hpp"
 
 namespace tsri::registers
@@ -73,7 +71,7 @@ public:
      *
      * Equivalent to REG = value1 << shift1 | value2 << shift2 | ... | valueN << shiftN | (~bitmask & value_on_reset);
      *
-     * @tparam Fields Fields to set.
+     * @tparam Values Values to set.
      */
     template<typename... Values>
         requires utility::concepts::are_types_unique_v<typename Values::field_t...> and
@@ -106,7 +104,7 @@ public:
      *
      * Equivalent to REG = value1 << shift1 | value2 << shift2 | ... | valueN << shiftN | (~bitmask & value_on_reset);
      *
-     * @tparam Fields Fields to set.
+     * @tparam Values Values to set.
      */
     template<typename... Values>
         requires utility::concepts::are_types_unique_v<typename Values::field_t...> and
@@ -127,7 +125,7 @@ public:
          * Otherwise, use a register as the offset. This is a bit more expensive but can still potentially save some
          * code size.
          */
-        // NOLINTNEXTLINE(bugprone-branch-clone): clangd-21 flags this incorrectly.
+        // NOLINTNEXTLINE(bugprone-branch-clone): clangd flags this incorrectly.
         if constexpr (PeripheralBaseAddressOffset <= isa_offset_max_value)
         {
             asm volatile("str %[value], [%[base], %[offset]]"

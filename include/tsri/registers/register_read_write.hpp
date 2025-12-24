@@ -22,7 +22,7 @@ namespace tsri::registers
  * @tparam PeripheralBaseAddressOffset  Offest from theh peripheral base address.
  * @tparam ValueOnReset                 Value of the register after the CPU resets.
  * @tparam SupportsAtomicBitOperations  Whether the register supports atomic bit operations (xor, set, clear).
- * @tparam Fields                       Fields inside the register.
+ * @tparam RegisterFields               Fields inside the register.
  */
 template<
     utility::types::register_address_t PeripheralBaseAddress,
@@ -51,7 +51,7 @@ public:
      * @brief Set provided fields to the provided values. Does not overwrite existing register data.
      * Equivalent to REG = value1 << shift1 | value2 << shift2 | ... | valueN << shiftN | (~bitmask & REG);
      *
-     * @tparam Fields Fields to set.
+     * @tparam Values Values to set. Each value is associated with a field.
      */
     template<typename... Values>
         requires utility::concepts::are_types_unique_v<typename Values::field_t...> and

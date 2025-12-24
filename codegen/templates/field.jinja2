@@ -1,0 +1,40 @@
+{% if field.description != "" %}
+/*{{ field.description }}*/
+{% endif %}
+struct {{ field.name if field.name != register.name else field.name + "_" }} : public {{ get_field_base_name(register, field) }}
+{
+    using {{ get_field_base_name(register, field) }}::{{ get_field_base_name(register, field) }};
+
+    struct bit : public {{ get_field_base_name(register, field) }}::bit
+    {
+        using {{ get_field_base_name(register, field) }}::bit::bit;
+
+        {% for i in range(field.length_in_bits) %}
+        static constexpr auto BIT{{ i }} = {{ get_field_base_name(register, field) }}::bit{ {{ i }}U };
+        {% endfor %}
+    };
+
+    {% if field.enum_values | length > 0 %}
+    struct value
+    {
+        {% for enum in field.enum_values %}
+        {% if enum.description != "" %}
+        /*{{ enum.description }}*/
+        {% endif %}
+        static constexpr auto {{ enum.name | lower }} = {{ get_field_base_name(register, field) }}::value{ {{ enum.value }}U };
+        {% endfor %}
+
+        value()                                = delete;
+        value(value&&)                         = delete;
+        value(const value&)                    = delete;
+        auto operator=(value&&) -> value&      = delete;
+        auto operator=(const value&) -> value& = delete;
+        ~value()                               = delete;
+    };
+    {% elif field.access_type.value == "read-write" or field.access_type.value == "write-only" %}
+    struct value : {{ get_field_base_name(register, field) }}::value
+    {
+        using {{ get_field_base_name(register, field) }}::value::value;
+    };
+    {% endif %}
+};

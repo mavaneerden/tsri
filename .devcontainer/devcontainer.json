@@ -18,11 +18,12 @@
                 "ms-vscode.vscode-serial-monitor",
                 "ms-vscode.vscode-embedded-tools",
                 "mcu-debug.rtos-views",
-                "marus25.cortex-debug"
+                "marus25.cortex-debug",
+                "samuelcolvin.jinjahtml"
             ],
             "settings": {
                 "C_Cpp.intelliSenseEngine": "disabled",
-                "clangd.path": "clangd-20",
+                "clangd.path": "clangd-22",
                 "clangd.arguments": [
                     "--log=error",
                     "--background-index",

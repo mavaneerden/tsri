@@ -11,7 +11,7 @@
 #include <concepts>
 #include <type_traits>
 
-#include "../registers/register_read_write.hpp"
+// #include "../registers/register_read_write.hpp"
 #include "../registers/register_write_only.hpp"
 #include "../utility/types.hpp"
 #include "bit_position_container.hpp"
@@ -34,12 +34,16 @@ namespace tsri::fields
  *
  * @tparam StartBit     Start bit position in the register.
  * @tparam LengthInBits Length of the field in bits
+ * @tparam TypeOfField  Access type for the field.
+ * @tparam FieldValueOnReset Reset value of the field.
+ * @tparam RegisterAddress Address of the register that the field belongs to. Used to make each field type unique.
  */
 template<
-    utility::types::register_size_t  StartBit,
-    utility::types::register_size_t  LengthInBits,
-    field_types::field_type          TypeOfField,
-    utility::types::register_value_t FieldValueOnReset>
+    utility::types::register_size_t    StartBit,
+    utility::types::register_size_t    LengthInBits,
+    field_types::field_type            TypeOfField,
+    utility::types::register_value_t   FieldValueOnReset,
+    utility::types::register_address_t RegisterAddress>
 class field
 {
     /* Ayo this class has more friends than me... 🥲 */
@@ -81,7 +85,7 @@ class field
     friend class registers::register_read_write;
 
 private:
-    using this_t = field<StartBit, LengthInBits, TypeOfField, FieldValueOnReset>;
+    using this_t = field<StartBit, LengthInBits, TypeOfField, FieldValueOnReset, RegisterAddress>;
 
     /* Whether the field is readable. */
     static constexpr bool is_readable = field_types::is_readable<TypeOfField>;
@@ -152,7 +156,7 @@ private:
          * 11111111 >> 5 = 00000111
          */
         static constexpr utility::types::register_size_t right_shift =
-            (sizeof(utility::types::register_value_t) * CHAR_BIT) - LengthInBits;
+            (sizeof(utility::types::register_value_t) * 8U) - LengthInBits;
 
         /**
          * Left shift is done to put the number of bits acquired from the right shift in the correct \em position.
@@ -170,8 +174,8 @@ private:
      * @param value Value to insert into the field's position in its register.
      * @return utility::types::register_value_t Value shifted and bitmasked into the field's position.
      */
-    TSRI_INLINE static constexpr auto get_register_value_from_field_value(
-        const value& value) noexcept -> utility::types::register_value_t
+    TSRI_INLINE static constexpr auto get_register_value_from_field_value(const value& value) noexcept
+        -> utility::types::register_value_t
     {
         return (static_cast<utility::types::register_value_t>(value) << StartBit) & bitmask;
     }

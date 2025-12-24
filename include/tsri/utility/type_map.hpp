@@ -13,17 +13,38 @@ namespace tsri::utility::types
 namespace detail
 {
 
+/**
+ * @brief Implementation of a type map: the keys are types, and they are mapped to values.
+ * The keys \b must be unique, and the values must satisfy `std::unsigned_integral`.
+ *
+ * This type map has optional structured binding support. To enable it, the
+ * `TSRI_OPTION_ENABLE_STRUCTURED_BINDING_FOR_GET_FIELDS` macro must be defined.
+ *
+ * @tparam Keys Keys for the type map, these must be unique.
+ */
 template<typename... Keys>
     requires concepts::are_types_unqiue<Keys...>
 class type_map_impl
 {
 private:
-    template<typename Type, typename _, typename... TypePack>
-    static constexpr std::size_t type_pack_index = 1 + type_pack_index<Type, TypePack...>;
+    /**
+     * @brief Get the first index of a type in a parameter pack using recursion.
+     *
+     * @tparam Type Type to get the index of.
+     * @tparam RemainingTypes Remaining types in the pack.
+     */
+    template<typename Type, typename _, typename... RemainingTypes>
+    struct type_pack_index : std::integral_constant<size_t, 1 + type_pack_index<Type, RemainingTypes...>::value>
+    {};
 
-    template<typename Type, typename TypePack>
-    static constexpr std::size_t type_pack_index<Type, TypePack> = 0U;
+    /**
+     * @brief Base case for getting the index of a type.
+     */
+    template<typename Type, typename... RemainingTypes>
+    struct type_pack_index<Type, Type, RemainingTypes...> : std::integral_constant<size_t, 0U>
+    {};
 
+    /* Map is implemented as an `std::array` because the `Keys` (types) are themselves mapped to unique indices. */
     std::array<register_value_t, sizeof...(Keys)> value_list;
 
 public:
@@ -59,14 +80,14 @@ protected:
         requires concepts::is_type_in_list<Key, Keys...>
     [[nodiscard]] TSRI_INLINE constexpr auto get() const& noexcept -> auto&&
     {
-        return std::get<type_pack_index<Key, Keys...>>(value_list);
+        return std::get<type_pack_index<Key, Keys...>::value>(value_list);
     }
 
     template<typename Key>
         requires concepts::is_type_in_list<Key, Keys...>
     [[nodiscard]] TSRI_INLINE constexpr auto get() const&& noexcept -> auto&&
     {
-        return std::get<type_pack_index<Key, Keys...>>(value_list);
+        return std::get<type_pack_index<Key, Keys...>::value>(value_list);
     }
 };
 
@@ -121,10 +142,10 @@ struct tuple_size<tsri::utility::types::detail::type_map_impl<Keys...>> :
     public integral_constant<std::size_t, sizeof...(Keys)>
 {};
 
-template<std::size_t N, typename... Keys>
-struct tuple_element<N, tsri::utility::types::detail::type_map_impl<Keys...>>
+template<std::size_t Index, typename... Keys>
+struct tuple_element<Index, tsri::utility::types::detail::type_map_impl<Keys...>>
 {
-    using type = Keys...[N] ::value;
+    using type = Keys...[Index]; // TODO: does this work???
 };
 
 }  // namespace std

@@ -1,0 +1,41 @@
+{%- macro get_field_base_name(register, field) -%}
+{{ register.name | lower }}_{{ field.name | lower }}_base_t
+{%- endmacro -%}
+
+#include "tsri/tsri.hpp"
+
+{% if namespace != "" %}
+namespace {{ namespace }}
+{
+{% endif %}
+
+{% if peripheral.description != "" %}
+/*{{ peripheral.description }}*/
+{% endif %}
+class {{ peripheral.name }}
+{
+private:
+{% for register in peripheral.registers %}
+    {% for field in register.fields %}
+    using {{ get_field_base_name(register, field) }} = tsri::fields::field<{{ field.start_bit }}U, {{ field.length_in_bits }}U, tsri::fields::field_types::{{ field.access_type.value | replace("-", "_") }}, {{field.value_on_reset}}, {{register.base_address + register.address_offset}}>;
+    {% endfor %}
+{% endfor %}
+
+public:
+    {% for register in peripheral.registers %}
+    {% with register=register, peripheral=peripheral %}
+        {% include "register.jinja2" %}
+
+    {% endwith %}
+    {% endfor %}
+
+    {{ peripheral.name }}()                                = delete;
+    {{ peripheral.name }}({{ peripheral.name }}&&)         = delete;
+    {{ peripheral.name }}(const {{ peripheral.name }}&)    = delete;
+    auto operator=({{ peripheral.name }}&&) -> {{ peripheral.name }}&      = delete;
+    auto operator=(const {{ peripheral.name }}&) -> {{ peripheral.name }}& = delete;
+    ~{{ peripheral.name }}()                               = delete;
+};
+{% if namespace != "" %}
+}
+{% endif %}

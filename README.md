@@ -69,14 +69,15 @@ reg::set_fields_overwrite( ... ); // same format as set_fields
 
 ```
 
-
 ## Supported devices
 Currently, only the RP2040 processor is supported.
 
 ## Limitations
-- Compiling is somewhat slow because of all the templated code
+- Extremely slow compilation due to lots of metaprogramming makes this project impractical to use. A precompiled header
+  is *required* to keep compilation times down. Generating the precompiled header takes about 5m40s on my machine for
+  the rp2040 example. Subsequent compilations with a change in `blink.cpp` take about 4.5s. This is OK for this example,
+  but one shudders to imagine what the compile times would be for projects with 100s of files.
 - Constant values for fields that can have any value are not checked
-  - It is possible to use a template for this, but it could be confusing since there would be two possible value constructors with different syntax
 - Runtime variables are not checked
 
 ## Disclaimer

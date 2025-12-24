@@ -41,7 +41,7 @@ public:
     ~register_read_only()                                            = delete;
 
     /**
-     * @brief
+     * @brief TODO:
      *
      * @return utility::types::register_value_t
      */
@@ -51,7 +51,7 @@ public:
     }
 
     /**
-     * @brief
+     * @brief TODO:
      *
      * @return true
      * @return false
@@ -62,7 +62,7 @@ public:
     }
 
     /**
-     * @brief
+     * @brief TODO:
      *
      * @return true
      * @return false
@@ -75,12 +75,12 @@ public:
     }
 
     /**
-     * @brief
+     * @brief TODO:
      *
      * @note This function uses an optimization which assumes that reserved register bits are always 0. If you get
      * strange values, try turning the optimization off by defining `TSRI_OPTION_NO_OPTIMIZE_GET_FIELDS`.
      *
-     * @tparam Fields
+     * @tparam Fields Fields to get values from.
      * @return utility::types::type_map
      */
     template<typename... Fields>
@@ -109,6 +109,11 @@ public:
         return utility::types::type_map<Fields...>{ Fields::get_field_value_from_register_value(register_value)... };
     }
 
+    /**
+     * @brief TODO:
+     *
+     * @tparam Fields
+     */
     template<typename... Fields>
         requires utility::concepts::are_types_unique_v<Fields...> and
                  (base_t::template are_fields_in_register<Fields...>) and
@@ -120,6 +125,11 @@ public:
         return (base_t::const_reference() & bitmask) != 0U;
     }
 
+    /**
+     * @brief TODO:
+     *
+     * @tparam Fields
+     */
     template<typename... Fields>
         requires utility::concepts::are_types_unique_v<Fields...> and
                  (base_t::template are_fields_in_register<Fields...>) and
